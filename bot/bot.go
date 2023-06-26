@@ -2,31 +2,42 @@
 package bot
 
 import (
+	"time"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 type DiscordBot struct {
-	commands       []*discordgo.ApplicationCommand
-	session        *discordgo.Session
-	handlers       map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)
-	log            *zap.SugaredLogger
-	RemoveCommands bool
-	GuildID        string
+	commands          []*discordgo.ApplicationCommand
+	session           *discordgo.Session
+	log               *zap.SugaredLogger
+	signalRepository  signalRepository
+	RemoveCommands    bool
+	GuildID           string
+	defaultStockLists map[string]struct{}
+	defaultTimeout    time.Duration
 }
 
-func NewBot(token string, guildId string, removeCommands bool, log *zap.SugaredLogger) (*DiscordBot, error) {
+func NewBot(token string, guildId string, removeCommands bool, log *zap.SugaredLogger, signalRepository signalRepository) (*DiscordBot, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, errors.Wrap(err, "Invalid bot parameters")
 	}
 
 	bot := &DiscordBot{
-		session:        session,
-		handlers:       commandHandlers,
-		log:            log,
-		RemoveCommands: removeCommands,
+		session:          session,
+		log:              log,
+		RemoveCommands:   removeCommands,
+		signalRepository: signalRepository,
+		defaultTimeout:   10 * time.Second,
+		defaultStockLists: map[string]struct{}{
+			"Small Cap Stockholm":  {},
+			"Mid Cap Stockholm":    {},
+			"Large Cap Stockholm":  {},
+			"Large Cap Copenhagen": {},
+		},
 	}
 
 	// Register handlers
@@ -38,7 +49,7 @@ func NewBot(token string, guildId string, removeCommands bool, log *zap.SugaredL
 	}
 
 	// Register commands
-	if err := bot.registerCommands(allCommands); err != nil {
+	if err := bot.registerCommands(bot.listCommands()); err != nil {
 		return nil, errors.Wrap(err, "Could not authenticate")
 	}
 
@@ -48,8 +59,10 @@ func NewBot(token string, guildId string, removeCommands bool, log *zap.SugaredL
 // registerHandlers adds functionality similar to a router where it maps
 // the incoming command to its designated handler
 func (bot *DiscordBot) registerHandlers() {
+	handlers := bot.getHandlers()
+
 	bot.session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if handleFunc, ok := bot.handlers[i.ApplicationCommandData().Name]; ok {
+		if handleFunc, ok := handlers[i.ApplicationCommandData().Name]; ok {
 			handleFunc(s, i) // TODO: Add errors here
 		}
 	})

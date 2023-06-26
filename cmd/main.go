@@ -1,20 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"os/signal"
 
 	"github.com/karatekaneen/stockybot/bot"
+	"github.com/karatekaneen/stockybot/firestore"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 // Bot parameters
 var (
-	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
-	BotToken       = flag.String("token", "", "Bot access token")
-	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
+	GuildID              = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
+	BotToken             = flag.String("token", "", "Bot access token")
+	FirestoreCredentials = flag.String("gcpcreds", os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"), "Path to firestore access credentials")
+	RemoveCommands       = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
 )
 
 type LogConfig struct {
@@ -24,10 +27,21 @@ type LogConfig struct {
 func init() { flag.Parse() }
 
 func main() {
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", *FirestoreCredentials)
+
 	l, _ := createLogger(LogConfig{})
 	logger := l.Sugar()
 
-	b, err := bot.NewBot(*BotToken, *GuildID, *RemoveCommands, l.Sugar())
+	logger.Info(FirestoreCredentials)
+
+	ctx := context.Background()
+
+	db, err := firestore.New(ctx, "makeup-bauhn-se")
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	b, err := bot.NewBot(*BotToken, *GuildID, *RemoveCommands, l.Sugar(), db)
 	if err != nil {
 		logger.Fatal(err)
 	}
