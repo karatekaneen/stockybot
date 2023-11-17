@@ -17,6 +17,58 @@ func (b *DiscordBot) listCommands() []*discordgo.ApplicationCommand {
 				},
 			},
 		},
+		{
+			Name:        "rankbuys",
+			Description: "List pending buy signals by signal predicted ranking",
+			// Options: []*discordgo.ApplicationCommandOption{
+			// 	{
+			// 		Type:        discordgo.ApplicationCommandOptionBoolean,
+			// 		Name:        "all-lists",
+			// 		Description: "Show signals from all lists. Only listing Swedish Large, Mid and Small cap if false",
+			// 	},
+			// },
+		},
+		{
+			Name:        "watch",
+			Description: "Add or remove subscriptions of stocks",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "list",
+					Description: "List your subscriptions",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+				},
+				{
+					Name:        "add",
+					Description: "Add subscription of a stock",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "ticker",
+							Description: "Ticker of the stock you want to subscribe to",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Name:        "remove",
+					Description: "Remove subscription of a stock",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "ticker",
+							Description: "Ticker of the stock you want to subscribe to",
+							Required:    true,
+						},
+					},
+				},
+				// 		Type:        discordgo.ApplicationCommandOptionBoolean,
+				// 		Name:        "all-lists",
+				// 		Description: "Show signals from all lists. Only listing Swedish Large, Mid and Small cap if false",
+				// 	},
+			},
+		},
 	}
 }
 

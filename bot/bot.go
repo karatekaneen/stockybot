@@ -10,28 +10,36 @@ import (
 )
 
 type DiscordBot struct {
-	commands          []*discordgo.ApplicationCommand
+	dataRepository    dataRepository
+	watchRepository   subscriptionRepository
 	session           *discordgo.Session
 	log               *zap.SugaredLogger
-	signalRepository  signalRepository
-	RemoveCommands    bool
-	GuildID           string
 	defaultStockLists map[string]struct{}
+	GuildID           string
+	commands          []*discordgo.ApplicationCommand
 	defaultTimeout    time.Duration
+	RemoveCommands    bool
 }
 
-func NewBot(token string, guildId string, removeCommands bool, log *zap.SugaredLogger, signalRepository signalRepository) (*DiscordBot, error) {
+func NewBot(
+	token string,
+	guildId string,
+	removeCommands bool,
+	log *zap.SugaredLogger,
+	dataRepo dataRepository,
+) (*DiscordBot, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, errors.Wrap(err, "Invalid bot parameters")
 	}
 
 	bot := &DiscordBot{
-		session:          session,
-		log:              log,
-		RemoveCommands:   removeCommands,
-		signalRepository: signalRepository,
-		defaultTimeout:   10 * time.Second,
+		session:        session,
+		GuildID:        guildId,
+		log:            log,
+		RemoveCommands: removeCommands,
+		dataRepository: dataRepo,
+		defaultTimeout: 60 * time.Second,
 		defaultStockLists: map[string]struct{}{
 			"Small Cap Stockholm":  {},
 			"Mid Cap Stockholm":    {},
@@ -75,7 +83,11 @@ func (bot *DiscordBot) registerCommands(commands []*discordgo.ApplicationCommand
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 
 	for i, rawCmd := range commands {
-		cmd, err := bot.session.ApplicationCommandCreate(bot.session.State.User.ID, bot.GuildID, rawCmd)
+		cmd, err := bot.session.ApplicationCommandCreate(
+			bot.session.State.User.ID,
+			bot.GuildID,
+			rawCmd,
+		)
 		if err != nil {
 			return errors.Wrapf(err, "Cannot create '%v'", rawCmd.Name)
 		}
@@ -89,7 +101,7 @@ func (bot *DiscordBot) registerCommands(commands []*discordgo.ApplicationCommand
 }
 
 func (bot *DiscordBot) authenticate() error {
-	bot.session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+	bot.session.AddHandler(func(s *discordgo.Session, _ *discordgo.Ready) {
 		bot.log.Infof("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
 	})
 
@@ -107,7 +119,11 @@ func (bot *DiscordBot) Dispose() error {
 		bot.log.Info("Removing commands...")
 
 		for _, cmd := range bot.commands {
-			err := bot.session.ApplicationCommandDelete(bot.session.State.User.ID, bot.GuildID, cmd.ID)
+			err := bot.session.ApplicationCommandDelete(
+				bot.session.State.User.ID,
+				bot.GuildID,
+				cmd.ID,
+			)
 			if err != nil {
 				return errors.Wrapf(err, "Cannot delete '%v'", cmd.Name)
 			}

@@ -6,7 +6,8 @@ import (
 
 func (b *DiscordBot) getHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	return map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"pending": b.pendingSignals,
+		"pending":  b.pendingSignals,
+		"rankbuys": b.rankBuySignals,
 	}
 }
 
