@@ -23,7 +23,7 @@ type Security struct {
 	LinkName string `firestore:"linkName,omitempty"`
 	Type     string `firestore:"type,omitempty"`
 	Country  string `firestore:"country,omitempty"`
-	ID       int    `firestore:"id,omitempty"`
+	ID       int64  `firestore:"id,omitempty"`
 }
 
 type PriceDocument struct {
@@ -39,7 +39,7 @@ type PricePoint struct {
 	Open   float64 `json:"open,omitempty"   firestore:"open,omitempty"`
 	High   float64 `json:"high,omitempty"   firestore:"high,omitempty"`
 	Low    float64 `json:"low,omitempty"    firestore:"low,omitempty"`
-	Volume int     `json:"volume,omitempty" firestore:"volume,omitempty"`
+	Volume int64   `json:"volume,omitempty" firestore:"volume,omitempty"`
 }
 
 // You will have a bad time if you pass a negative number. Don't do that.

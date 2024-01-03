@@ -4,11 +4,14 @@ go 1.21
 
 require (
 	cloud.google.com/go/firestore v1.9.0
+	github.com/alecthomas/kong v0.8.1
 	github.com/bwmarrin/discordgo v0.26.1
 	github.com/carlmjohnson/requests v0.23.4
+	github.com/joho/godotenv v1.5.1
 	github.com/matryer/is v1.4.1
 	github.com/nats-io/nats.go v1.28.1-0.20230825120320-f73692b751ff
 	github.com/pkg/errors v0.9.1
+	github.com/sanity-io/litter v1.5.5
 	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/api v0.103.0

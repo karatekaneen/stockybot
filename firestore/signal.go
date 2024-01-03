@@ -58,6 +58,7 @@ func (r rawSignal) toSignal() (*stockybot.Signal, error) {
 		Strategy:    "flipper",
 	}, nil
 }
+
 func (r rawSignal2) toSignal() (*stockybot.Signal, error) {
 	date, err := time.Parse(time.RFC3339, r.Date)
 	if err != nil {
@@ -110,14 +111,14 @@ func (f *FireDB) PendingSignals(ctx context.Context) ([]stockybot.Signal, error)
 	return signals, nil
 }
 
-func (f *FireDB) Signals(ctx context.Context, stockId int) ([]stockybot.Signal, error) {
+func (f *FireDB) Signals(ctx context.Context, stockId int64) ([]stockybot.Signal, error) {
 	signals := []stockybot.Signal{}
 
 	doc, err := f.client.Collection("signals").Doc(fmt.Sprint(stockId)).Get(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signal document")
 	} else if !doc.Exists() {
-		return nil, fmt.Errorf("socument does not exist")
+		return nil, stockybot.ErrNotFound
 	}
 
 	var sigDoc signalDocument

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (f *FireDB) PriceData(ctx context.Context, id int) (*stockybot.PriceDocument, error) {
+func (f *FireDB) PriceData(ctx context.Context, id int64) (*stockybot.PriceDocument, error) {
 	doc, err := f.client.Collection("prices").Doc(fmt.Sprint(id)).Get(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "Get document:")

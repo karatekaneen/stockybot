@@ -11,9 +11,9 @@ import (
 )
 
 type subscriptionRepository interface {
-	AddSubscription(ctx context.Context, securityId int, userId string) error
-	RemoveSubscription(ctx context.Context, securityId int, userId string) error
-	GetSubscribedSecurities(ctx context.Context, userId string) ([]int, error)
+	AddSubscription(ctx context.Context, securityId int64, userId string) error
+	RemoveSubscription(ctx context.Context, securityId int64, userId string) error
+	GetSubscribedSecurities(ctx context.Context, userId string) ([]int64, error)
 }
 
 type securityResp struct {
@@ -96,7 +96,7 @@ func (b *DiscordBot) listWatchedSecurities(
 	// Fan out
 	ch := make(chan securityResp)
 	for _, secId := range secIds {
-		go func(id int) {
+		go func(id int64) {
 			sec, err := b.dataRepository.Security(ctx, id)
 			if err != nil {
 				err = fmt.Errorf("could not fetch security %d: %w", id, err)

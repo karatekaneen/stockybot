@@ -5,41 +5,47 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/karatekaneen/stockybot/predictor"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 type DiscordBot struct {
+	predictor         *predictor.Predictor
 	dataRepository    dataRepository
-	watchRepository   subscriptionRepository
+	watchRepo         subscriptionRepository
 	session           *discordgo.Session
 	log               *zap.SugaredLogger
 	defaultStockLists map[string]struct{}
-	GuildID           string
 	commands          []*discordgo.ApplicationCommand
-	defaultTimeout    time.Duration
-	RemoveCommands    bool
+	cfg               Config
+}
+
+type Config struct {
+	DefaultTimeout time.Duration `help:"Default timeout for operations"            default:"60s"   env:"DEFAULT_TIMEOUT"`
+	RemoveCommands bool          `help:"If commands should be removed on shutdown" default:"true"  env:"REMOVE_COMMANDS"`
+	IndexId        int64         `help:"The ID of the index to use as benchmark"   default:"19002" env:"MARKET_INDEX_ID"`
+	Token          string        `help:"Auth token"                                                env:"TOKEN"           required:""`
+	GuildID        string        `help:"Guild ID to connect to"                                    env:"GUILD_ID"        required:""`
 }
 
 func NewBot(
-	token string,
-	guildId string,
-	removeCommands bool,
+	config Config,
 	log *zap.SugaredLogger,
-	dataRepo dataRepository,
+	repo dataRepository,
+	pred *predictor.Predictor,
 ) (*DiscordBot, error) {
-	session, err := discordgo.New("Bot " + token)
+	session, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
 		return nil, errors.Wrap(err, "Invalid bot parameters")
 	}
 
 	bot := &DiscordBot{
 		session:        session,
-		GuildID:        guildId,
+		cfg:            config,
 		log:            log,
-		RemoveCommands: removeCommands,
-		dataRepository: dataRepo,
-		defaultTimeout: 60 * time.Second,
+		dataRepository: repo,
+		predictor:      pred,
 		defaultStockLists: map[string]struct{}{
 			"Small Cap Stockholm":  {},
 			"Mid Cap Stockholm":    {},
@@ -85,7 +91,7 @@ func (bot *DiscordBot) registerCommands(commands []*discordgo.ApplicationCommand
 	for i, rawCmd := range commands {
 		cmd, err := bot.session.ApplicationCommandCreate(
 			bot.session.State.User.ID,
-			bot.GuildID,
+			bot.cfg.GuildID,
 			rawCmd,
 		)
 		if err != nil {
@@ -115,13 +121,13 @@ func (bot *DiscordBot) authenticate() error {
 func (bot *DiscordBot) Dispose() error {
 	defer bot.session.Close()
 
-	if bot.RemoveCommands {
+	if bot.cfg.RemoveCommands {
 		bot.log.Info("Removing commands...")
 
 		for _, cmd := range bot.commands {
 			err := bot.session.ApplicationCommandDelete(
 				bot.session.State.User.ID,
-				bot.GuildID,
+				bot.cfg.GuildID,
 				cmd.ID,
 			)
 			if err != nil {

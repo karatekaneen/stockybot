@@ -2,64 +2,74 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
+	"github.com/carlmjohnson/requests"
 )
 
 func main() {
-	// connect to nats server
-	nc, err := nats.Connect("nats://192.168.0.26:4222")
+	resp := ""
+	err := requests.URL("https://stockyscaler-dudb2aklkq-lz.a.run.app/mirror").
+		BodyJSON(map[string]string{"hello": "world"}).
+		ToString(&resp).
+		Fetch(context.Background())
 	if err != nil {
 		panic(err)
 	}
 
-	// create jetstream context from nats connection
-	js, err := jetstream.New(nc)
-	if err != nil {
-		panic(err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "tmp", History: 2})
-	if err != nil {
-		panic(err)
-	}
-
-	if _, err := kv.PutString(ctx, "foo", "hello there"); err != nil {
-		panic(err)
-	}
-
-	if _, err := kv.PutString(ctx, "foo", "hello you"); err != nil {
-		panic(err)
-	}
-
-	e, err := kv.Get(ctx, "foo2")
-	if err != nil {
-		if errors.Is(err, jetstream.ErrKeyNotFound) {
-			panic("lol")
-		}
-		panic(err)
-	}
-
-	fmt.Println(e.Bucket(), e.Created(), e.Key(), e.Operation(), e.Revision(), string(e.Value()))
-	// fmt.Println(v.)
-
-	entries, err := kv.History(ctx, "foo")
-	if err != nil {
-		panic(err)
-
-	}
-
-	for _, e := range entries {
-		fmt.Println(e.Bucket(), e.Created(), e.Key(), e.Operation(), e.Revision(), string(e.Value()))
-	}
-
+	fmt.Println("GOT: ", resp)
 }
+
+// func main() {
+// 	// connect to nats server
+// 	nc, err := nats.Connect("nats://192.168.0.26:4222")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+//
+// 	// create jetstream context from nats connection
+// 	js, err := jetstream.New(nc)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+// 	defer cancel()
+//
+// 	kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "tmp", History: 2})
+// 	if err != nil {
+// 		panic(err)
+// 	}
+//
+// 	if _, err := kv.PutString(ctx, "foo", "hello there"); err != nil {
+// 		panic(err)
+// 	}
+//
+// 	if _, err := kv.PutString(ctx, "foo", "hello you"); err != nil {
+// 		panic(err)
+// 	}
+//
+// 	e, err := kv.Get(ctx, "foo2")
+// 	if err != nil {
+// 		if errors.Is(err, jetstream.ErrKeyNotFound) {
+// 			panic("lol")
+// 		}
+// 		panic(err)
+// 	}
+//
+// 	fmt.Println(e.Bucket(), e.Created(), e.Key(), e.Operation(), e.Revision(), string(e.Value()))
+// 	// fmt.Println(v.)
+//
+// 	entries, err := kv.History(ctx, "foo")
+// 	if err != nil {
+// 		panic(err)
+//
+// 	}
+//
+// 	for _, e := range entries {
+// 		fmt.Println(e.Bucket(), e.Created(), e.Key(), e.Operation(), e.Revision(), string(e.Value()))
+// 	}
+//
+// }
 
 // func main() {
 // 	// connect to nats server

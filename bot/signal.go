@@ -3,13 +3,11 @@ package bot
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/karatekaneen/stockybot"
-	"github.com/karatekaneen/stockybot/predictor"
 	"github.com/pkg/errors"
 )
 
@@ -21,9 +19,9 @@ type signalGroup struct {
 // TODO: Maybe split up?
 type dataRepository interface {
 	PendingSignals(ctx context.Context) ([]stockybot.Signal, error)
-	Signals(ctx context.Context, stockId int) ([]stockybot.Signal, error)
-	PriceData(ctx context.Context, id int) (*stockybot.PriceDocument, error)
-	Security(ctx context.Context, id int) (*stockybot.Security, error)
+	Signals(ctx context.Context, stockId int64) ([]stockybot.Signal, error)
+	PriceData(ctx context.Context, id int64) (*stockybot.PriceDocument, error)
+	Security(ctx context.Context, id int64) (*stockybot.Security, error)
 }
 
 func mapOptions(
@@ -38,7 +36,7 @@ func mapOptions(
 }
 
 func (bot *DiscordBot) pendingSignals(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	ctx, cancel := context.WithTimeout(context.Background(), bot.defaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), bot.cfg.DefaultTimeout)
 	defer cancel()
 
 	// Access options in the order provided by the user.
@@ -51,7 +49,7 @@ func (bot *DiscordBot) pendingSignals(s *discordgo.Session, i *discordgo.Interac
 
 	bot.log.Info("Starting to fetch signals")
 
-	signals, err := bot.signalRepository.PendingSignals(ctx)
+	signals, err := bot.dataRepository.PendingSignals(ctx)
 	if err != nil {
 		bot.log.Errorln(errors.Wrap(err, "Pending signal fetch:"))
 		interactionResponse(s, i, "An error occured")
@@ -67,79 +65,6 @@ func (bot *DiscordBot) pendingSignals(s *discordgo.Session, i *discordgo.Interac
 
 	bot.log.Info("Starting sending response")
 	if err := interactionResponse(s, i, strings.Join(content, "\n")); err != nil {
-		bot.log.Error(err)
-		return
-	}
-
-	bot.log.Info("Sent response")
-}
-
-func (bot *DiscordBot) rankBuySignals(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	ctx, cancel := context.WithTimeout(context.Background(), bot.defaultTimeout)
-	defer cancel()
-
-	bot.log.Info("Starting to fetch signals")
-
-	// BTS: 5503
-	stockId := 1051357
-	// stockId := 19002
-
-	// Omxs30: 19002
-	omxId := 19002
-	// omxId := 1051357
-
-	indexPriceDoc, err := bot.signalRepository.PriceData(ctx, omxId)
-	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Stock price fetch:"))
-		interactionResponse(s, i, "An error occured")
-		return
-	}
-
-	stockPriceDoc, err := bot.signalRepository.PriceData(ctx, stockId)
-	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Stock price fetch:"))
-		interactionResponse(s, i, "An error occured")
-		return
-	}
-
-	signals, err := bot.signalRepository.Signals(ctx, stockId)
-	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Signal price fetch:"))
-		interactionResponse(s, i, "An error occured")
-		return
-	}
-
-	stockPrices, err := stockybot.LastN(stockPriceDoc.PriceData, 201)
-	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Not enough data:"))
-		interactionResponse(s, i, "An error occured")
-		return
-	}
-	omxPrices, err := stockybot.LastN(indexPriceDoc.PriceData, 201)
-	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Not enough data:"))
-		interactionResponse(s, i, "An error occured")
-		return
-	}
-
-	p := predictor.Predictor{URL: "stockyml-dudb2aklkq-lz.a.run.app"}
-
-	prediction, err := p.SignalRank(ctx, predictor.PredictionRequest{
-		StockData:          stockPrices,
-		OmxData:            omxPrices,
-		TradesThisYear:     numberOfExitsSince(signals, time.Now().Add(-time.Hour*24*365)),
-		DaysSinceLastTrade: daysSinceLast(signals, time.Now()),
-	})
-	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Prediction request:"))
-		interactionResponse(s, i, "An error occured")
-		return
-	}
-
-	log.Printf("%+v", prediction)
-
-	bot.log.Info("Starting sending response")
-	if err := interactionResponse(s, i, "hell to the yes"); err != nil {
 		bot.log.Error(err)
 		return
 	}
@@ -237,6 +162,22 @@ func stockNames(signals []stockybot.Signal) []string {
 	return stockNames
 }
 
+func followUpResponse(
+	s *discordgo.Session,
+	i *discordgo.Interaction,
+	content string,
+) error {
+	_, err := s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{Content: content})
+	return err
+	// return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	// 	// Ignore type for now, they will be discussed in "responses"
+	// 	Type: discordgo.InteractionResponseChannelMessageWithSource,
+	// 	Data: &discordgo.InteractionResponseData{
+	// 		Content: content,
+	// 	},
+	// })
+}
+
 func interactionResponse(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
@@ -247,7 +188,6 @@ func interactionResponse(
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: content,
-			// fmt.Sprintf(	"Yolo  <@%s> %v", i.Member.User.ID, allLists,),
 		},
 	})
 }
