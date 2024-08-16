@@ -3,21 +3,70 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
 
-	"github.com/carlmjohnson/requests"
+	"github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 func main() {
-	resp := ""
-	err := requests.URL("https://stockyscaler-dudb2aklkq-lz.a.run.app/mirror").
-		BodyJSON(map[string]string{"hello": "world"}).
-		ToString(&resp).
-		Fetch(context.Background())
+	opts := &server.Options{
+		JetStream: true,
+		StoreDir:  "natstmp",
+	}
+
+	// Initialize new server with options
+	ns, err := server.NewServer(opts)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("GOT: ", resp)
+	// Start the server via goroutine
+	go ns.Start()
+
+	// Wait for server to be ready for connections
+	if !ns.ReadyForConnections(4 * time.Second) {
+		panic("not ready for connection")
+	}
+
+	nc, _ := nats.Connect(ns.ClientURL())
+	defer nc.Drain()
+
+	newJS, _ := jetstream.New(nc)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	stream, err := newJS.CreateStream(ctx, jetstream.StreamConfig{
+		Name:        "watch",
+		Description: "watching stocks",
+		Subjects:    []string{"watch.>"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cons, _ := stream.CreateOrUpdateConsumer(
+		ctx,
+		jetstream.ConsumerConfig{InactiveThreshold: 10 * time.Second},
+	)
+	fmt.Println("Created consumer", cons.CachedInfo().Name)
+
+	fmt.Println("# Consume messages using Consume()")
+	consumeContext, _ := cons.Consume(func(msg jetstream.Msg) {
+		fmt.Printf("received %q\n", msg.Subject())
+		fmt.Println(string(msg.Data()))
+		msg.Ack()
+	})
+
+	// for i := 0; i < 10; i++ {
+	// 	nc.Publish(fmt.Sprintf("watch.add.%d", i), []byte(fmt.Sprintf("hello from %d", i)))
+	// }
+	time.Sleep(11 * time.Second)
+
+	consumeContext.Stop()
 }
 
 // func main() {
