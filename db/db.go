@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/karatekaneen/stockybot"
@@ -11,17 +10,15 @@ import (
 	"github.com/karatekaneen/stockybot/ent/watch"
 )
 
-type subscriptionRepository interface{}
-
 type DB struct {
 	client *ent.Client
 }
 
-func (db *DB) AddSubscription(ctx context.Context, securityId int64, userId string) error {
+func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID string) error {
 	exist, err := db.client.Watch.Query().
 		Where(
-			watch.UserID(userId),
-			watch.HasWatchingWith(security.ID(int(securityId))),
+			watch.UserID(userID),
+			watch.HasSecurityWith(security.ID(int(securityID))),
 		).
 		Exist(ctx)
 	if exist {
@@ -32,23 +29,61 @@ func (db *DB) AddSubscription(ctx context.Context, securityId int64, userId stri
 
 	err = db.client.Watch.
 		Create().
-		SetUserID(userId).
-		SetWatchingID(int(securityId)).
+		SetUserID(userID).
+		SetSecurityID(int(securityID)).
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf("create watch for user %q on security %d: %w", userId, securityId, err)
+		return fmt.Errorf("create watch for user %q on security %d: %w", userID, securityID, err)
 	}
 
 	return nil
 }
 
-func (db *DB) RemoveSubscription(ctx context.Context, securityId int64, userId string) error {
-	return errors.New("not implemented")
+func (db *DB) RemoveSubscription(ctx context.Context, securityID int64, userID string) error {
+	w, err := db.client.Watch.Query().Where(
+		watch.UserID(userID),
+		watch.HasSecurityWith(security.ID(int(securityID))),
+	).First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return fmt.Errorf("fetch watch to remove: %w", err)
+	} else if ent.IsNotFound(err) {
+		return stockybot.ErrNotFound
+	}
+
+	if err = db.client.Watch.DeleteOne(w).Exec(ctx); err != nil {
+		return fmt.Errorf("delete watch: %w", err)
+	}
+
+	return nil
 }
 
 func (db *DB) GetSubscribedSecurities(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) ([]stockybot.Security, error) {
-	return nil, errors.New("not implemented")
+	watching, err := db.client.Watch.
+		Query().
+		Where(watch.UserID(userID)).
+		WithSecurity().
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch watching: %w", err)
+	}
+
+	watchedSecurities := make([]stockybot.Security, 0, len(watching))
+
+	for _, w := range watching {
+		sec := w.Edges.Security
+
+		watchedSecurities = append(watchedSecurities, stockybot.Security{
+			ID:       int64(sec.ID),
+			Name:     sec.Name,
+			List:     sec.List,
+			LinkName: sec.LinkName,
+			Type:     sec.Type.String(),
+			Country:  sec.Country,
+		})
+	}
+
+	return watchedSecurities, nil
 }

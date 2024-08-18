@@ -31,6 +31,6 @@ func (Watch) Indexes() []ent.Index {
 // Edges of the Watch.
 func (Watch) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("watching", Security.Type).Ref("watchers").Unique(),
+		edge.From("security", Security.Type).Ref("watchers").Unique(),
 	}
 }

@@ -170,21 +170,21 @@ func UserIDContainsFold(v string) predicate.Watch {
 	return predicate.Watch(sql.FieldContainsFold(FieldUserID, v))
 }
 
-// HasWatching applies the HasEdge predicate on the "watching" edge.
-func HasWatching() predicate.Watch {
+// HasSecurity applies the HasEdge predicate on the "security" edge.
+func HasSecurity() predicate.Watch {
 	return predicate.Watch(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, WatchingTable, WatchingColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, SecurityTable, SecurityColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasWatchingWith applies the HasEdge predicate on the "watching" edge with a given conditions (other predicates).
-func HasWatchingWith(preds ...predicate.Security) predicate.Watch {
+// HasSecurityWith applies the HasEdge predicate on the "security" edge with a given conditions (other predicates).
+func HasSecurityWith(preds ...predicate.Security) predicate.Watch {
 	return predicate.Watch(func(s *sql.Selector) {
-		step := newWatchingStep()
+		step := newSecurityStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

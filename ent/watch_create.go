@@ -41,23 +41,23 @@ func (wc *WatchCreate) SetUserID(s string) *WatchCreate {
 	return wc
 }
 
-// SetWatchingID sets the "watching" edge to the Security entity by ID.
-func (wc *WatchCreate) SetWatchingID(id int) *WatchCreate {
-	wc.mutation.SetWatchingID(id)
+// SetSecurityID sets the "security" edge to the Security entity by ID.
+func (wc *WatchCreate) SetSecurityID(id int) *WatchCreate {
+	wc.mutation.SetSecurityID(id)
 	return wc
 }
 
-// SetNillableWatchingID sets the "watching" edge to the Security entity by ID if the given value is not nil.
-func (wc *WatchCreate) SetNillableWatchingID(id *int) *WatchCreate {
+// SetNillableSecurityID sets the "security" edge to the Security entity by ID if the given value is not nil.
+func (wc *WatchCreate) SetNillableSecurityID(id *int) *WatchCreate {
 	if id != nil {
-		wc = wc.SetWatchingID(*id)
+		wc = wc.SetSecurityID(*id)
 	}
 	return wc
 }
 
-// SetWatching sets the "watching" edge to the Security entity.
-func (wc *WatchCreate) SetWatching(s *Security) *WatchCreate {
-	return wc.SetWatchingID(s.ID)
+// SetSecurity sets the "security" edge to the Security entity.
+func (wc *WatchCreate) SetSecurity(s *Security) *WatchCreate {
+	return wc.SetSecurityID(s.ID)
 }
 
 // Mutation returns the WatchMutation object of the builder.
@@ -148,12 +148,12 @@ func (wc *WatchCreate) createSpec() (*Watch, *sqlgraph.CreateSpec) {
 		_spec.SetField(watch.FieldUserID, field.TypeString, value)
 		_node.UserID = value
 	}
-	if nodes := wc.mutation.WatchingIDs(); len(nodes) > 0 {
+	if nodes := wc.mutation.SecurityIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   watch.WatchingTable,
-			Columns: []string{watch.WatchingColumn},
+			Table:   watch.SecurityTable,
+			Columns: []string{watch.SecurityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt),

@@ -464,15 +464,15 @@ func (c *WatchClient) GetX(ctx context.Context, id int) *Watch {
 	return obj
 }
 
-// QueryWatching queries the watching edge of a Watch.
-func (c *WatchClient) QueryWatching(w *Watch) *SecurityQuery {
+// QuerySecurity queries the security edge of a Watch.
+func (c *WatchClient) QuerySecurity(w *Watch) *SecurityQuery {
 	query := (&SecurityClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := w.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(watch.Table, watch.FieldID, id),
 			sqlgraph.To(security.Table, security.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, watch.WatchingTable, watch.WatchingColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, watch.SecurityTable, watch.SecurityColumn),
 		)
 		fromV = sqlgraph.Neighbors(w.driver.Dialect(), step)
 		return fromV, nil

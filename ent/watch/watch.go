@@ -18,17 +18,17 @@ const (
 	FieldWatchedSince = "watched_since"
 	// FieldUserID holds the string denoting the user_id field in the database.
 	FieldUserID = "user_id"
-	// EdgeWatching holds the string denoting the watching edge name in mutations.
-	EdgeWatching = "watching"
+	// EdgeSecurity holds the string denoting the security edge name in mutations.
+	EdgeSecurity = "security"
 	// Table holds the table name of the watch in the database.
 	Table = "watches"
-	// WatchingTable is the table that holds the watching relation/edge.
-	WatchingTable = "watches"
-	// WatchingInverseTable is the table name for the Security entity.
+	// SecurityTable is the table that holds the security relation/edge.
+	SecurityTable = "watches"
+	// SecurityInverseTable is the table name for the Security entity.
 	// It exists in this package in order to avoid circular dependency with the "security" package.
-	WatchingInverseTable = "securities"
-	// WatchingColumn is the table column denoting the watching relation/edge.
-	WatchingColumn = "security_watchers"
+	SecurityInverseTable = "securities"
+	// SecurityColumn is the table column denoting the security relation/edge.
+	SecurityColumn = "security_watchers"
 )
 
 // Columns holds all SQL columns for watch fields.
@@ -84,16 +84,16 @@ func ByUserID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUserID, opts...).ToFunc()
 }
 
-// ByWatchingField orders the results by watching field.
-func ByWatchingField(field string, opts ...sql.OrderTermOption) OrderOption {
+// BySecurityField orders the results by security field.
+func BySecurityField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newWatchingStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newSecurityStep(), sql.OrderByField(field, opts...))
 	}
 }
-func newWatchingStep() *sqlgraph.Step {
+func newSecurityStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(WatchingInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, WatchingTable, WatchingColumn),
+		sqlgraph.To(SecurityInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, SecurityTable, SecurityColumn),
 	)
 }

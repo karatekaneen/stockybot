@@ -695,8 +695,8 @@ type WatchMutation struct {
 	watched_since   *time.Time
 	user_id         *string
 	clearedFields   map[string]struct{}
-	watching        *int
-	clearedwatching bool
+	security        *int
+	clearedsecurity bool
 	done            bool
 	oldValue        func(context.Context) (*Watch, error)
 	predicates      []predicate.Watch
@@ -872,43 +872,43 @@ func (m *WatchMutation) ResetUserID() {
 	m.user_id = nil
 }
 
-// SetWatchingID sets the "watching" edge to the Security entity by id.
-func (m *WatchMutation) SetWatchingID(id int) {
-	m.watching = &id
+// SetSecurityID sets the "security" edge to the Security entity by id.
+func (m *WatchMutation) SetSecurityID(id int) {
+	m.security = &id
 }
 
-// ClearWatching clears the "watching" edge to the Security entity.
-func (m *WatchMutation) ClearWatching() {
-	m.clearedwatching = true
+// ClearSecurity clears the "security" edge to the Security entity.
+func (m *WatchMutation) ClearSecurity() {
+	m.clearedsecurity = true
 }
 
-// WatchingCleared reports if the "watching" edge to the Security entity was cleared.
-func (m *WatchMutation) WatchingCleared() bool {
-	return m.clearedwatching
+// SecurityCleared reports if the "security" edge to the Security entity was cleared.
+func (m *WatchMutation) SecurityCleared() bool {
+	return m.clearedsecurity
 }
 
-// WatchingID returns the "watching" edge ID in the mutation.
-func (m *WatchMutation) WatchingID() (id int, exists bool) {
-	if m.watching != nil {
-		return *m.watching, true
+// SecurityID returns the "security" edge ID in the mutation.
+func (m *WatchMutation) SecurityID() (id int, exists bool) {
+	if m.security != nil {
+		return *m.security, true
 	}
 	return
 }
 
-// WatchingIDs returns the "watching" edge IDs in the mutation.
+// SecurityIDs returns the "security" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// WatchingID instead. It exists only for internal usage by the builders.
-func (m *WatchMutation) WatchingIDs() (ids []int) {
-	if id := m.watching; id != nil {
+// SecurityID instead. It exists only for internal usage by the builders.
+func (m *WatchMutation) SecurityIDs() (ids []int) {
+	if id := m.security; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetWatching resets all changes to the "watching" edge.
-func (m *WatchMutation) ResetWatching() {
-	m.watching = nil
-	m.clearedwatching = false
+// ResetSecurity resets all changes to the "security" edge.
+func (m *WatchMutation) ResetSecurity() {
+	m.security = nil
+	m.clearedsecurity = false
 }
 
 // Where appends a list predicates to the WatchMutation builder.
@@ -1062,8 +1062,8 @@ func (m *WatchMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *WatchMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.watching != nil {
-		edges = append(edges, watch.EdgeWatching)
+	if m.security != nil {
+		edges = append(edges, watch.EdgeSecurity)
 	}
 	return edges
 }
@@ -1072,8 +1072,8 @@ func (m *WatchMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *WatchMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case watch.EdgeWatching:
-		if id := m.watching; id != nil {
+	case watch.EdgeSecurity:
+		if id := m.security; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -1095,8 +1095,8 @@ func (m *WatchMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *WatchMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.clearedwatching {
-		edges = append(edges, watch.EdgeWatching)
+	if m.clearedsecurity {
+		edges = append(edges, watch.EdgeSecurity)
 	}
 	return edges
 }
@@ -1105,8 +1105,8 @@ func (m *WatchMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *WatchMutation) EdgeCleared(name string) bool {
 	switch name {
-	case watch.EdgeWatching:
-		return m.clearedwatching
+	case watch.EdgeSecurity:
+		return m.clearedsecurity
 	}
 	return false
 }
@@ -1115,8 +1115,8 @@ func (m *WatchMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *WatchMutation) ClearEdge(name string) error {
 	switch name {
-	case watch.EdgeWatching:
-		m.ClearWatching()
+	case watch.EdgeSecurity:
+		m.ClearSecurity()
 		return nil
 	}
 	return fmt.Errorf("unknown Watch unique edge %s", name)
@@ -1126,8 +1126,8 @@ func (m *WatchMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *WatchMutation) ResetEdge(name string) error {
 	switch name {
-	case watch.EdgeWatching:
-		m.ResetWatching()
+	case watch.EdgeSecurity:
+		m.ResetSecurity()
 		return nil
 	}
 	return fmt.Errorf("unknown Watch edge %s", name)

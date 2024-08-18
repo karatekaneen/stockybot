@@ -23,7 +23,7 @@ type WatchQuery struct {
 	order        []watch.OrderOption
 	inters       []Interceptor
 	predicates   []predicate.Watch
-	withWatching *SecurityQuery
+	withSecurity *SecurityQuery
 	withFKs      bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -61,8 +61,8 @@ func (wq *WatchQuery) Order(o ...watch.OrderOption) *WatchQuery {
 	return wq
 }
 
-// QueryWatching chains the current query on the "watching" edge.
-func (wq *WatchQuery) QueryWatching() *SecurityQuery {
+// QuerySecurity chains the current query on the "security" edge.
+func (wq *WatchQuery) QuerySecurity() *SecurityQuery {
 	query := (&SecurityClient{config: wq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := wq.prepareQuery(ctx); err != nil {
@@ -75,7 +75,7 @@ func (wq *WatchQuery) QueryWatching() *SecurityQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(watch.Table, watch.FieldID, selector),
 			sqlgraph.To(security.Table, security.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, watch.WatchingTable, watch.WatchingColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, watch.SecurityTable, watch.SecurityColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(wq.driver.Dialect(), step)
 		return fromU, nil
@@ -275,21 +275,21 @@ func (wq *WatchQuery) Clone() *WatchQuery {
 		order:        append([]watch.OrderOption{}, wq.order...),
 		inters:       append([]Interceptor{}, wq.inters...),
 		predicates:   append([]predicate.Watch{}, wq.predicates...),
-		withWatching: wq.withWatching.Clone(),
+		withSecurity: wq.withSecurity.Clone(),
 		// clone intermediate query.
 		sql:  wq.sql.Clone(),
 		path: wq.path,
 	}
 }
 
-// WithWatching tells the query-builder to eager-load the nodes that are connected to
-// the "watching" edge. The optional arguments are used to configure the query builder of the edge.
-func (wq *WatchQuery) WithWatching(opts ...func(*SecurityQuery)) *WatchQuery {
+// WithSecurity tells the query-builder to eager-load the nodes that are connected to
+// the "security" edge. The optional arguments are used to configure the query builder of the edge.
+func (wq *WatchQuery) WithSecurity(opts ...func(*SecurityQuery)) *WatchQuery {
 	query := (&SecurityClient{config: wq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	wq.withWatching = query
+	wq.withSecurity = query
 	return wq
 }
 
@@ -373,10 +373,10 @@ func (wq *WatchQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Watch,
 		withFKs     = wq.withFKs
 		_spec       = wq.querySpec()
 		loadedTypes = [1]bool{
-			wq.withWatching != nil,
+			wq.withSecurity != nil,
 		}
 	)
-	if wq.withWatching != nil {
+	if wq.withSecurity != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -400,16 +400,16 @@ func (wq *WatchQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Watch,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := wq.withWatching; query != nil {
-		if err := wq.loadWatching(ctx, query, nodes, nil,
-			func(n *Watch, e *Security) { n.Edges.Watching = e }); err != nil {
+	if query := wq.withSecurity; query != nil {
+		if err := wq.loadSecurity(ctx, query, nodes, nil,
+			func(n *Watch, e *Security) { n.Edges.Security = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (wq *WatchQuery) loadWatching(ctx context.Context, query *SecurityQuery, nodes []*Watch, init func(*Watch), assign func(*Watch, *Security)) error {
+func (wq *WatchQuery) loadSecurity(ctx context.Context, query *SecurityQuery, nodes []*Watch, init func(*Watch), assign func(*Watch, *Security)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*Watch)
 	for i := range nodes {

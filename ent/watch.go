@@ -31,22 +31,22 @@ type Watch struct {
 
 // WatchEdges holds the relations/edges for other nodes in the graph.
 type WatchEdges struct {
-	// Watching holds the value of the watching edge.
-	Watching *Security `json:"watching,omitempty"`
+	// Security holds the value of the security edge.
+	Security *Security `json:"security,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// WatchingOrErr returns the Watching value or an error if the edge
+// SecurityOrErr returns the Security value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e WatchEdges) WatchingOrErr() (*Security, error) {
-	if e.Watching != nil {
-		return e.Watching, nil
+func (e WatchEdges) SecurityOrErr() (*Security, error) {
+	if e.Security != nil {
+		return e.Security, nil
 	} else if e.loadedTypes[0] {
 		return nil, &NotFoundError{label: security.Label}
 	}
-	return nil, &NotLoadedError{edge: "watching"}
+	return nil, &NotLoadedError{edge: "security"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -115,9 +115,9 @@ func (w *Watch) Value(name string) (ent.Value, error) {
 	return w.selectValues.Get(name)
 }
 
-// QueryWatching queries the "watching" edge of the Watch entity.
-func (w *Watch) QueryWatching() *SecurityQuery {
-	return NewWatchClient(w.config).QueryWatching(w)
+// QuerySecurity queries the "security" edge of the Watch entity.
+func (w *Watch) QuerySecurity() *SecurityQuery {
+	return NewWatchClient(w.config).QuerySecurity(w)
 }
 
 // Update returns a builder for updating this Watch.
