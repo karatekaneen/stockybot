@@ -3,14 +3,17 @@ package firestore
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
-	"github.com/karatekaneen/stockybot"
-	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
+
+	"github.com/karatekaneen/stockybot"
 )
 
+//nolint:revive
 type rawSignal struct {
 	Action      string             `firestore:"action,omitempty"`      // buy or sell
 	Date        string             `firestore:"date,omitempty"`        // The date for when the signal was executed. Or when it was generated for pending signals
@@ -22,6 +25,7 @@ type rawSignal struct {
 	Strategy    string             `firestore:"strategy,omitempty"`    // What strategy generated the signal
 }
 
+//nolint:revive
 type rawSignal2 struct {
 	Action      string             `firestore:"action,omitempty"`      // buy or sell
 	Date        string             `firestore:"date,omitempty"`        // The date for when the signal was executed. Or when it was generated for pending signals
@@ -40,11 +44,12 @@ type signalDocument struct {
 func (r rawSignal) toSignal() (*stockybot.Signal, error) {
 	date, err := time.Parse(time.RFC3339, r.Date)
 	if err != nil {
-		return nil, errors.Wrap(err, "Parse: ")
+		return nil, fmt.Errorf("parse time: %w", err)
 	}
+
 	triggerDate, err := time.Parse(time.RFC3339, r.TriggerDate)
 	if err != nil {
-		return nil, errors.Wrap(err, "Parse: ")
+		return nil, fmt.Errorf("parse time: %w", err)
 	}
 
 	return &stockybot.Signal{
@@ -62,11 +67,12 @@ func (r rawSignal) toSignal() (*stockybot.Signal, error) {
 func (r rawSignal2) toSignal() (*stockybot.Signal, error) {
 	date, err := time.Parse(time.RFC3339, r.Date)
 	if err != nil {
-		return nil, errors.Wrap(err, "Parse: ")
+		return nil, fmt.Errorf("parse time: %w", err)
 	}
+
 	triggerDate, err := time.Parse(time.RFC3339, r.TriggerDate)
 	if err != nil {
-		return nil, errors.Wrap(err, "Parse: ")
+		return nil, fmt.Errorf("parse time: %w", err)
 	}
 
 	return &stockybot.Signal{
@@ -88,16 +94,16 @@ func (f *FireDB) PendingSignals(ctx context.Context) ([]stockybot.Signal, error)
 
 	for {
 		doc, err := signalIterator.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		} else if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetch pending signals: %w", err)
 		}
 
 		var raw rawSignal
 
 		if err := doc.DataTo(&raw); err != nil {
-			return nil, errors.Wrap(err, "conversion: ")
+			return nil, fmt.Errorf("convert signal document: %w", err)
 		}
 
 		sig, err := raw.toSignal()
@@ -111,19 +117,19 @@ func (f *FireDB) PendingSignals(ctx context.Context) ([]stockybot.Signal, error)
 	return signals, nil
 }
 
-func (f *FireDB) Signals(ctx context.Context, stockId int64) ([]stockybot.Signal, error) {
+func (f *FireDB) Signals(ctx context.Context, stockID int64) ([]stockybot.Signal, error) {
 	signals := []stockybot.Signal{}
 
-	doc, err := f.client.Collection("signals").Doc(fmt.Sprint(stockId)).Get(ctx)
+	doc, err := f.client.Collection("signals").Doc(strconv.FormatInt(stockID, 10)).Get(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching signal document")
+		return nil, fmt.Errorf("fetch signal document: %w", err)
 	} else if !doc.Exists() {
 		return nil, stockybot.ErrNotFound
 	}
 
 	var sigDoc signalDocument
 	if err := doc.DataTo(&sigDoc); err != nil {
-		return nil, errors.Wrap(err, "conversion: ")
+		return nil, fmt.Errorf("convert signal document: %w", err)
 	}
 
 	for _, raw := range sigDoc.Signals {

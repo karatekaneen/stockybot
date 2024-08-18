@@ -1,0 +1,55 @@
+run:
+  tests: false
+
+output:
+  formats:
+    - format: colored-tab
+      path: stderr
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  enable-all: true
+  disable:
+    - depguard # Go linter that checks if package imports are in a list of acceptable packages.
+    - gci # Gci controls Go package import order and makes it always deterministic.
+    - godot # Check if comments end in a period.
+    - gomnd # An analyzer to detect magic numbers. (handled by revive.add-constant)
+    - lll # Reports long lines. (handled by golines)
+    - nlreturn # Nlreturn checks for a new line before return and branch statements to increase code clarity.
+    - tagalign # Check that struct tags are well aligned.
+
+linters-settings:
+  funlen:
+    ignore-comments: true
+  forbidigo:
+    exclude-godoc-examples: true
+    analyze-types: true
+    forbid:
+      # We want to force use of the local sentry hub to have all the context passed on.
+      - p: ^sentry\.Capture.*$
+        msg: Don't use Sentry directly, use sentryHub(ctx) instead.
+  dupl: # Tool for code clone detection.
+    threshold: 400 # Tokens count to trigger issue.
+  revive: # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+    enable-all-rules: true
+    rules:
+      - name: add-constant # Suggests using constant for magic numbers and string literals.
+        disabled: true
+      - name: confusing-naming # Methods or fields of struct that have names different only by capitalization could be confusing.
+        disabled: true
+      - name: cyclomatic # Cyclomatic complexity is a measure of code complexity. Enforcing a maximum complexity per function helps to keep code readable and maintainable.
+        arguments: [16]
+      - name: cognitive-complexity # Cognitive complexity is a measure of how hard code is to understand. While cyclomatic complexity is good to measure "testability" of the code, cognitive complexity aims to provide a more precise measure of the difficulty of understanding the code. Enforcing a maximum complexity per function helps to keep code readable and maintainable.
+        arguments: [16]
+      - name: exported # Exported function and methods should have comments. This warns on undocumented exported functions and methods.
+        disabled: true
+      - name: line-length-limit # Warns in the presence of code lines longer than a configured maximum. (handled by golines)
+        arguments: [100]
+      - name: unhandled-error # This rule warns when errors returned by a function are not explicitly handled on the caller side.
+        arguments: ["fmt.Print(f|ln)?"] # Function names regexp patterns to ignore
+  varnamelen: # Checks that the length of a variable's name matches its scope.
+    max-distance: 20 # The longest distance, in source lines, that is being considered a "small scope".
+    ignore-names: ["db", "err", "f", "i", "id", "r", "tx", "w", "s"]

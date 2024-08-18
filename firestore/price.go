@@ -2,23 +2,26 @@ package firestore
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/karatekaneen/stockybot"
-	"github.com/pkg/errors"
 )
 
+var ErrNotExist = errors.New("document does not exist")
+
 func (f *FireDB) PriceData(ctx context.Context, id int64) (*stockybot.PriceDocument, error) {
-	doc, err := f.client.Collection("prices").Doc(fmt.Sprint(id)).Get(ctx)
+	doc, err := f.client.Collection("prices").Doc(strconv.FormatInt(id, 10)).Get(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "Get document:")
+		return nil, fmt.Errorf("fetch price document: %w", err)
 	} else if !doc.Exists() {
-		return nil, errors.New("Document does not exist")
+		return nil, ErrNotExist
 	}
 
 	var raw stockybot.PriceDocument
 	if err := doc.DataTo(&raw); err != nil {
-		return nil, errors.Wrap(err, "conversion: ")
+		return nil, fmt.Errorf("convert price document: %w", err)
 	}
 
 	return &raw, nil
