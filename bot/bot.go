@@ -2,13 +2,22 @@
 package bot
 
 import (
+	"context"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/karatekaneen/stockybot/predictor"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+
+	"github.com/karatekaneen/stockybot"
+	"github.com/karatekaneen/stockybot/predictor"
 )
+
+type subscriptionRepository interface {
+	AddSubscription(ctx context.Context, securityId int64, userId string) error
+	RemoveSubscription(ctx context.Context, securityId int64, userId string) error
+	GetSubscribedSecurities(ctx context.Context, userId string) ([]stockybot.Security, error)
+}
 
 type DiscordBot struct {
 	predictor         *predictor.Predictor
@@ -22,11 +31,11 @@ type DiscordBot struct {
 }
 
 type Config struct {
-	DefaultTimeout time.Duration `help:"Default timeout for operations"            default:"60s"   env:"DEFAULT_TIMEOUT"`
-	RemoveCommands bool          `help:"If commands should be removed on shutdown" default:"true"  env:"REMOVE_COMMANDS"`
-	IndexId        int64         `help:"The ID of the index to use as benchmark"   default:"19002" env:"MARKET_INDEX_ID"`
-	Token          string        `help:"Auth token"                                                env:"TOKEN"           required:""`
-	GuildID        string        `help:"Guild ID to connect to"                                    env:"GUILD_ID"        required:""`
+	Token          string        `help:"Auth token"                                env:"TOKEN"           required:""`
+	GuildID        string        `help:"Guild ID to connect to"                    env:"GUILD_ID"        required:""`
+	DefaultTimeout time.Duration `help:"Default timeout for operations"            env:"DEFAULT_TIMEOUT"             default:"60s"`
+	IndexId        int64         `help:"The ID of the index to use as benchmark"   env:"MARKET_INDEX_ID"             default:"19002"`
+	RemoveCommands bool          `help:"If commands should be removed on shutdown" env:"REMOVE_COMMANDS"             default:"true"`
 }
 
 func NewBot(
