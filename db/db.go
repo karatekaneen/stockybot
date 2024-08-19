@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -19,6 +20,44 @@ type SecurityProvider interface {
 type DB struct {
 	client *ent.Client
 	log    *zap.SugaredLogger
+}
+
+func New(client *ent.Client, log *zap.SugaredLogger) *DB {
+	return &DB{
+		client: client,
+		log:    log,
+	}
+}
+
+func (db *DB) ImportPeriodically(
+	ctx context.Context,
+	provider SecurityProvider,
+	cadence time.Duration,
+) error {
+	// Do a first import before starting timer
+	if err := db.ImportSecurities(ctx, provider); err != nil {
+		return fmt.Errorf("first import failed: %w", err)
+	}
+
+	if cadence == 0 {
+		return nil
+	}
+
+	ticker := time.NewTicker(cadence)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err() //nolint:wrapcheck
+		case <-ticker.C:
+			db.log.Info("Starting security import")
+
+			if err := db.ImportSecurities(ctx, provider); err != nil {
+				return fmt.Errorf("import failed: %w", err)
+			}
+		}
+	}
 }
 
 func (db *DB) ImportSecurities(ctx context.Context, provider SecurityProvider) error {
