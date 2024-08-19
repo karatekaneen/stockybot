@@ -107,8 +107,8 @@ func (sq *SecurityQuery) FirstX(ctx context.Context) *Security {
 
 // FirstID returns the first Security ID from the query.
 // Returns a *NotFoundError when no Security ID was found.
-func (sq *SecurityQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (sq *SecurityQuery) FirstID(ctx context.Context) (id int64, err error) {
+	var ids []int64
 	if ids, err = sq.Limit(1).IDs(setContextOp(ctx, sq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
@@ -120,7 +120,7 @@ func (sq *SecurityQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (sq *SecurityQuery) FirstIDX(ctx context.Context) int {
+func (sq *SecurityQuery) FirstIDX(ctx context.Context) int64 {
 	id, err := sq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -158,8 +158,8 @@ func (sq *SecurityQuery) OnlyX(ctx context.Context) *Security {
 // OnlyID is like Only, but returns the only Security ID in the query.
 // Returns a *NotSingularError when more than one Security ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (sq *SecurityQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (sq *SecurityQuery) OnlyID(ctx context.Context) (id int64, err error) {
+	var ids []int64
 	if ids, err = sq.Limit(2).IDs(setContextOp(ctx, sq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
@@ -175,7 +175,7 @@ func (sq *SecurityQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (sq *SecurityQuery) OnlyIDX(ctx context.Context) int {
+func (sq *SecurityQuery) OnlyIDX(ctx context.Context) int64 {
 	id, err := sq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -203,7 +203,7 @@ func (sq *SecurityQuery) AllX(ctx context.Context) []*Security {
 }
 
 // IDs executes the query and returns a list of Security IDs.
-func (sq *SecurityQuery) IDs(ctx context.Context) (ids []int, err error) {
+func (sq *SecurityQuery) IDs(ctx context.Context) (ids []int64, err error) {
 	if sq.ctx.Unique == nil && sq.path != nil {
 		sq.Unique(true)
 	}
@@ -215,7 +215,7 @@ func (sq *SecurityQuery) IDs(ctx context.Context) (ids []int, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (sq *SecurityQuery) IDsX(ctx context.Context) []int {
+func (sq *SecurityQuery) IDsX(ctx context.Context) []int64 {
 	ids, err := sq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -405,7 +405,7 @@ func (sq *SecurityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sec
 
 func (sq *SecurityQuery) loadWatchers(ctx context.Context, query *WatchQuery, nodes []*Security, init func(*Security), assign func(*Security, *Watch)) error {
 	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*Security)
+	nodeids := make(map[int64]*Security)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
@@ -445,7 +445,7 @@ func (sq *SecurityQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (sq *SecurityQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(security.Table, security.Columns, sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewQuerySpec(security.Table, security.Columns, sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64))
 	_spec.From = sq.sql
 	if unique := sq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique

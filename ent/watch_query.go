@@ -410,8 +410,8 @@ func (wq *WatchQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Watch,
 }
 
 func (wq *WatchQuery) loadSecurity(ctx context.Context, query *SecurityQuery, nodes []*Watch, init func(*Watch), assign func(*Watch, *Security)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*Watch)
+	ids := make([]int64, 0, len(nodes))
+	nodeids := make(map[int64][]*Watch)
 	for i := range nodes {
 		if nodes[i].security_watchers == nil {
 			continue

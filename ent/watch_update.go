@@ -58,13 +58,13 @@ func (wu *WatchUpdate) SetNillableUserID(s *string) *WatchUpdate {
 }
 
 // SetSecurityID sets the "security" edge to the Security entity by ID.
-func (wu *WatchUpdate) SetSecurityID(id int) *WatchUpdate {
+func (wu *WatchUpdate) SetSecurityID(id int64) *WatchUpdate {
 	wu.mutation.SetSecurityID(id)
 	return wu
 }
 
 // SetNillableSecurityID sets the "security" edge to the Security entity by ID if the given value is not nil.
-func (wu *WatchUpdate) SetNillableSecurityID(id *int) *WatchUpdate {
+func (wu *WatchUpdate) SetNillableSecurityID(id *int64) *WatchUpdate {
 	if id != nil {
 		wu = wu.SetSecurityID(*id)
 	}
@@ -150,7 +150,7 @@ func (wu *WatchUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{watch.SecurityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -163,7 +163,7 @@ func (wu *WatchUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{watch.SecurityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -220,13 +220,13 @@ func (wuo *WatchUpdateOne) SetNillableUserID(s *string) *WatchUpdateOne {
 }
 
 // SetSecurityID sets the "security" edge to the Security entity by ID.
-func (wuo *WatchUpdateOne) SetSecurityID(id int) *WatchUpdateOne {
+func (wuo *WatchUpdateOne) SetSecurityID(id int64) *WatchUpdateOne {
 	wuo.mutation.SetSecurityID(id)
 	return wuo
 }
 
 // SetNillableSecurityID sets the "security" edge to the Security entity by ID if the given value is not nil.
-func (wuo *WatchUpdateOne) SetNillableSecurityID(id *int) *WatchUpdateOne {
+func (wuo *WatchUpdateOne) SetNillableSecurityID(id *int64) *WatchUpdateOne {
 	if id != nil {
 		wuo = wuo.SetSecurityID(*id)
 	}
@@ -342,7 +342,7 @@ func (wuo *WatchUpdateOne) sqlSave(ctx context.Context) (_node *Watch, err error
 			Columns: []string{watch.SecurityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -355,7 +355,7 @@ func (wuo *WatchUpdateOne) sqlSave(ctx context.Context) (_node *Watch, err error
 			Columns: []string{watch.SecurityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

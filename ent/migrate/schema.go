@@ -10,7 +10,7 @@ import (
 var (
 	// SecuritiesColumns holds the columns for the "securities" table.
 	SecuritiesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "country", Type: field.TypeString},
 		{Name: "link_name", Type: field.TypeString, Nullable: true},
@@ -35,7 +35,7 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "watched_since", Type: field.TypeTime},
 		{Name: "user_id", Type: field.TypeString},
-		{Name: "security_watchers", Type: field.TypeInt, Nullable: true},
+		{Name: "security_watchers", Type: field.TypeInt64, Nullable: true},
 	}
 	// WatchesTable holds the schema information for the "watches" table.
 	WatchesTable = &schema.Table{

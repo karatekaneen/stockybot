@@ -64,6 +64,8 @@ var (
 	CountryValidator func(string) error
 	// ListValidator is a validator for the "list" field. It is called by the builders before save.
 	ListValidator func(string) error
+	// IDValidator is a validator for the "id" field. It is called by the builders before save.
+	IDValidator func(int64) error
 )
 
 // Type defines the type for the "type" enum field.

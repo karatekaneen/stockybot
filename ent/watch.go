@@ -25,7 +25,7 @@ type Watch struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the WatchQuery when eager-loading is set.
 	Edges             WatchEdges `json:"edges"`
-	security_watchers *int
+	security_watchers *int64
 	selectValues      sql.SelectValues
 }
 
@@ -99,8 +99,8 @@ func (w *Watch) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field security_watchers", value)
 			} else if value.Valid {
-				w.security_watchers = new(int)
-				*w.security_watchers = int(value.Int64)
+				w.security_watchers = new(int64)
+				*w.security_watchers = int64(value.Int64)
 			}
 		default:
 			w.selectValues.Set(columns[i], values[i])

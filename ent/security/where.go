@@ -9,47 +9,47 @@ import (
 )
 
 // ID filters vertices based on their ID field.
-func ID(id int) predicate.Security {
+func ID(id int64) predicate.Security {
 	return predicate.Security(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
-func IDEQ(id int) predicate.Security {
+func IDEQ(id int64) predicate.Security {
 	return predicate.Security(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
-func IDNEQ(id int) predicate.Security {
+func IDNEQ(id int64) predicate.Security {
 	return predicate.Security(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
-func IDIn(ids ...int) predicate.Security {
+func IDIn(ids ...int64) predicate.Security {
 	return predicate.Security(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
-func IDNotIn(ids ...int) predicate.Security {
+func IDNotIn(ids ...int64) predicate.Security {
 	return predicate.Security(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
-func IDGT(id int) predicate.Security {
+func IDGT(id int64) predicate.Security {
 	return predicate.Security(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
-func IDGTE(id int) predicate.Security {
+func IDGTE(id int64) predicate.Security {
 	return predicate.Security(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
-func IDLT(id int) predicate.Security {
+func IDLT(id int64) predicate.Security {
 	return predicate.Security(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
-func IDLTE(id int) predicate.Security {
+func IDLTE(id int64) predicate.Security {
 	return predicate.Security(sql.FieldLTE(FieldID, id))
 }
 

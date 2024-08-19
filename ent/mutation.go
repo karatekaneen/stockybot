@@ -34,7 +34,7 @@ type SecurityMutation struct {
 	config
 	op              Op
 	typ             string
-	id              *int
+	id              *int64
 	name            *string
 	country         *string
 	link_name       *string
@@ -69,7 +69,7 @@ func newSecurityMutation(c config, op Op, opts ...securityOption) *SecurityMutat
 }
 
 // withSecurityID sets the ID field of the mutation.
-func withSecurityID(id int) securityOption {
+func withSecurityID(id int64) securityOption {
 	return func(m *SecurityMutation) {
 		var (
 			err   error
@@ -119,9 +119,15 @@ func (m SecurityMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Security entities.
+func (m *SecurityMutation) SetID(id int64) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *SecurityMutation) ID() (id int, exists bool) {
+func (m *SecurityMutation) ID() (id int64, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -132,12 +138,12 @@ func (m *SecurityMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *SecurityMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *SecurityMutation) IDs(ctx context.Context) ([]int64, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []int64{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -695,7 +701,7 @@ type WatchMutation struct {
 	watched_since   *time.Time
 	user_id         *string
 	clearedFields   map[string]struct{}
-	security        *int
+	security        *int64
 	clearedsecurity bool
 	done            bool
 	oldValue        func(context.Context) (*Watch, error)
@@ -873,7 +879,7 @@ func (m *WatchMutation) ResetUserID() {
 }
 
 // SetSecurityID sets the "security" edge to the Security entity by id.
-func (m *WatchMutation) SetSecurityID(id int) {
+func (m *WatchMutation) SetSecurityID(id int64) {
 	m.security = &id
 }
 
@@ -888,7 +894,7 @@ func (m *WatchMutation) SecurityCleared() bool {
 }
 
 // SecurityID returns the "security" edge ID in the mutation.
-func (m *WatchMutation) SecurityID() (id int, exists bool) {
+func (m *WatchMutation) SecurityID() (id int64, exists bool) {
 	if m.security != nil {
 		return *m.security, true
 	}
@@ -898,7 +904,7 @@ func (m *WatchMutation) SecurityID() (id int, exists bool) {
 // SecurityIDs returns the "security" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
 // SecurityID instead. It exists only for internal usage by the builders.
-func (m *WatchMutation) SecurityIDs() (ids []int) {
+func (m *WatchMutation) SecurityIDs() (ids []int64) {
 	if id := m.security; id != nil {
 		ids = append(ids, *id)
 	}

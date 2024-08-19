@@ -268,7 +268,7 @@ func (c *SecurityClient) UpdateOne(s *Security) *SecurityUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *SecurityClient) UpdateOneID(id int) *SecurityUpdateOne {
+func (c *SecurityClient) UpdateOneID(id int64) *SecurityUpdateOne {
 	mutation := newSecurityMutation(c.config, OpUpdateOne, withSecurityID(id))
 	return &SecurityUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -285,7 +285,7 @@ func (c *SecurityClient) DeleteOne(s *Security) *SecurityDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *SecurityClient) DeleteOneID(id int) *SecurityDeleteOne {
+func (c *SecurityClient) DeleteOneID(id int64) *SecurityDeleteOne {
 	builder := c.Delete().Where(security.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -302,12 +302,12 @@ func (c *SecurityClient) Query() *SecurityQuery {
 }
 
 // Get returns a Security entity by its id.
-func (c *SecurityClient) Get(ctx context.Context, id int) (*Security, error) {
+func (c *SecurityClient) Get(ctx context.Context, id int64) (*Security, error) {
 	return c.Query().Where(security.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *SecurityClient) GetX(ctx context.Context, id int) *Security {
+func (c *SecurityClient) GetX(ctx context.Context, id int64) *Security {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)

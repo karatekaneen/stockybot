@@ -42,13 +42,13 @@ func (wc *WatchCreate) SetUserID(s string) *WatchCreate {
 }
 
 // SetSecurityID sets the "security" edge to the Security entity by ID.
-func (wc *WatchCreate) SetSecurityID(id int) *WatchCreate {
+func (wc *WatchCreate) SetSecurityID(id int64) *WatchCreate {
 	wc.mutation.SetSecurityID(id)
 	return wc
 }
 
 // SetNillableSecurityID sets the "security" edge to the Security entity by ID if the given value is not nil.
-func (wc *WatchCreate) SetNillableSecurityID(id *int) *WatchCreate {
+func (wc *WatchCreate) SetNillableSecurityID(id *int64) *WatchCreate {
 	if id != nil {
 		wc = wc.SetSecurityID(*id)
 	}
@@ -156,7 +156,7 @@ func (wc *WatchCreate) createSpec() (*Watch, *sqlgraph.CreateSpec) {
 			Columns: []string{watch.SecurityColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

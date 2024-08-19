@@ -58,6 +58,12 @@ func (sc *SecurityCreate) SetType(s security.Type) *SecurityCreate {
 	return sc
 }
 
+// SetID sets the "id" field.
+func (sc *SecurityCreate) SetID(i int64) *SecurityCreate {
+	sc.mutation.SetID(i)
+	return sc
+}
+
 // AddWatcherIDs adds the "watchers" edge to the Watch entity by IDs.
 func (sc *SecurityCreate) AddWatcherIDs(ids ...int) *SecurityCreate {
 	sc.mutation.AddWatcherIDs(ids...)
@@ -139,6 +145,11 @@ func (sc *SecurityCreate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Security.type": %w`, err)}
 		}
 	}
+	if v, ok := sc.mutation.ID(); ok {
+		if err := security.IDValidator(v); err != nil {
+			return &ValidationError{Name: "id", err: fmt.Errorf(`ent: validator failed for field "Security.id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -153,8 +164,10 @@ func (sc *SecurityCreate) sqlSave(ctx context.Context) (*Security, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != _node.ID {
+		id := _spec.ID.Value.(int64)
+		_node.ID = int64(id)
+	}
 	sc.mutation.id = &_node.ID
 	sc.mutation.done = true
 	return _node, nil
@@ -163,8 +176,12 @@ func (sc *SecurityCreate) sqlSave(ctx context.Context) (*Security, error) {
 func (sc *SecurityCreate) createSpec() (*Security, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Security{config: sc.config}
-		_spec = sqlgraph.NewCreateSpec(security.Table, sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt))
+		_spec = sqlgraph.NewCreateSpec(security.Table, sqlgraph.NewFieldSpec(security.FieldID, field.TypeInt64))
 	)
+	if id, ok := sc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = id
+	}
 	if value, ok := sc.mutation.Name(); ok {
 		_spec.SetField(security.FieldName, field.TypeString, value)
 		_node.Name = value
@@ -248,9 +265,9 @@ func (scb *SecurityCreateBulk) Save(ctx context.Context) ([]*Security, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
+				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
 					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
+					nodes[i].ID = int64(id)
 				}
 				mutation.done = true
 				return nodes[i], nil

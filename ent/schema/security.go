@@ -15,6 +15,7 @@ type Security struct {
 // Fields of the Security.
 func (Security) Fields() []ent.Field {
 	return []ent.Field{
+		field.Int64("id").Positive().Unique(),
 		field.String("name").NotEmpty().Unique(),
 		field.String("country").NotEmpty(),
 		field.String("link_name").Optional(),
