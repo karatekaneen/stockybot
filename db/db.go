@@ -4,21 +4,61 @@ import (
 	"context"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/karatekaneen/stockybot"
 	"github.com/karatekaneen/stockybot/ent"
 	"github.com/karatekaneen/stockybot/ent/security"
 	"github.com/karatekaneen/stockybot/ent/watch"
 )
 
+type SecurityProvider interface {
+	Securities(ctx context.Context) ([]stockybot.Security, error)
+}
+
 type DB struct {
 	client *ent.Client
+	log    *zap.SugaredLogger
+}
+
+func (db *DB) ImportSecurities(ctx context.Context, provider SecurityProvider) error {
+	secs, err := provider.Securities(ctx)
+	if err != nil {
+		return fmt.Errorf("fetch securities from provider: %w", err)
+	}
+
+	db.log.Infof("Found %d stocks to import", len(secs))
+
+	created := 0
+
+	for _, sec := range secs {
+		err := db.client.Security.Create().
+			SetID(sec.ID).
+			SetName(sec.Name).
+			SetList(sec.List).
+			SetLinkName(sec.LinkName).
+			SetType(security.Type(sec.Type)).
+			SetCountry(sec.Country).
+			Exec(ctx)
+		if ent.IsConstraintError(err) {
+			continue
+		} else if err != nil {
+			return fmt.Errorf("failed to import security %d: %w", sec.ID, err)
+		}
+
+		created++
+	}
+
+	db.log.Infof("Imported %d out of %d stocks", created, len(secs))
+
+	return nil
 }
 
 func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID string) error {
 	exist, err := db.client.Watch.Query().
 		Where(
 			watch.UserID(userID),
-			watch.HasSecurityWith(security.ID(int(securityID))),
+			watch.HasSecurityWith(security.ID(securityID)),
 		).
 		Exist(ctx)
 	if exist {
@@ -30,7 +70,7 @@ func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID stri
 	err = db.client.Watch.
 		Create().
 		SetUserID(userID).
-		SetSecurityID(int(securityID)).
+		SetSecurityID(securityID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("create watch for user %q on security %d: %w", userID, securityID, err)
@@ -42,7 +82,7 @@ func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID stri
 func (db *DB) RemoveSubscription(ctx context.Context, securityID int64, userID string) error {
 	w, err := db.client.Watch.Query().Where(
 		watch.UserID(userID),
-		watch.HasSecurityWith(security.ID(int(securityID))),
+		watch.HasSecurityWith(security.ID(securityID)),
 	).First(ctx)
 	if err != nil && !ent.IsNotFound(err) {
 		return fmt.Errorf("fetch watch to remove: %w", err)
@@ -76,7 +116,7 @@ func (db *DB) GetSubscribedSecurities(
 		sec := w.Edges.Security
 
 		watchedSecurities = append(watchedSecurities, stockybot.Security{
-			ID:       int64(sec.ID),
+			ID:       sec.ID,
 			Name:     sec.Name,
 			List:     sec.List,
 			LinkName: sec.LinkName,
