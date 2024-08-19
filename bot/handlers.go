@@ -4,10 +4,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func (b *DiscordBot) getHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (bot *DiscordBot) getHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	return map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"pending":  b.pendingSignals,
-		"rankbuys": b.rankBuySignals,
+		"pending":  bot.pendingSignals,
+		"rankbuys": bot.rankBuySignals,
 	}
 }
 

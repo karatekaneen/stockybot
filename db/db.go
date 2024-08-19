@@ -22,11 +22,34 @@ type DB struct {
 	log    *zap.SugaredLogger
 }
 
-func New(client *ent.Client, log *zap.SugaredLogger) *DB {
-	return &DB{
-		client: client,
-		log:    log,
+type Config struct {
+	Location string `help:"DB file location" env:"DB_LOCATION"`
+}
+
+func (c Config) DSN() string {
+	if c.Location == "" {
+		return "file:ent?mode=memory&cache=shared&_fk=1"
 	}
+
+	return c.Location + "?cache=shared&_fk=1"
+}
+
+func New(ctx context.Context, cfg Config, log *zap.SugaredLogger) (*DB, error) {
+	client, err := ent.Open("sqlite3", cfg.DSN())
+	if err != nil {
+		return nil, fmt.Errorf("failed opening connection to sqlite: %w", err)
+	}
+
+	// Run the auto migration tool.
+	if err := client.Schema.Create(ctx); err != nil {
+		return nil, fmt.Errorf("failed creating schema resources: %w", err)
+	}
+
+	return &DB{client: client, log: log}, nil
+}
+
+func (db *DB) Close() error {
+	return db.client.Close() //nolint:wrapcheck
 }
 
 func (db *DB) ImportPeriodically(

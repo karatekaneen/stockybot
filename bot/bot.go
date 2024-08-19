@@ -14,9 +14,9 @@ import (
 )
 
 type subscriptionRepository interface {
-	AddSubscription(ctx context.Context, securityId int64, userId string) error
-	RemoveSubscription(ctx context.Context, securityId int64, userId string) error
-	GetSubscribedSecurities(ctx context.Context, userId string) ([]stockybot.Security, error)
+	AddSubscription(ctx context.Context, securityID int64, userID string) error
+	RemoveSubscription(ctx context.Context, securityID int64, userID string) error
+	GetSubscribedSecurities(ctx context.Context, userID string) ([]stockybot.Security, error)
 }
 
 type DiscordBot struct {
@@ -30,11 +30,12 @@ type DiscordBot struct {
 	cfg               Config
 }
 
+//nolint:revive
 type Config struct {
 	Token          string        `help:"Auth token"                                env:"TOKEN"           required:""`
 	GuildID        string        `help:"Guild ID to connect to"                    env:"GUILD_ID"        required:""`
 	DefaultTimeout time.Duration `help:"Default timeout for operations"            env:"DEFAULT_TIMEOUT"             default:"60s"`
-	IndexId        int64         `help:"The ID of the index to use as benchmark"   env:"MARKET_INDEX_ID"             default:"19002"`
+	IndexID        int64         `help:"The ID of the index to use as benchmark"   env:"MARKET_INDEX_ID"             default:"19002"`
 	RemoveCommands bool          `help:"If commands should be removed on shutdown" env:"REMOVE_COMMANDS"             default:"true"`
 }
 
@@ -43,6 +44,7 @@ func NewBot(
 	log *zap.SugaredLogger,
 	repo dataRepository,
 	pred *predictor.Predictor,
+	watchRepo subscriptionRepository,
 ) (*DiscordBot, error) {
 	session, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
@@ -54,6 +56,7 @@ func NewBot(
 		cfg:            config,
 		log:            log,
 		dataRepository: repo,
+		watchRepo:      watchRepo,
 		predictor:      pred,
 		defaultStockLists: map[string]struct{}{
 			"Small Cap Stockholm":  {},

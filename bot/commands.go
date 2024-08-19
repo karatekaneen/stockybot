@@ -4,7 +4,8 @@ import "github.com/bwmarrin/discordgo"
 
 // var integerOptionMinValue = 1.0
 
-func (b *DiscordBot) listCommands() []*discordgo.ApplicationCommand {
+func (*DiscordBot) listCommands() []*discordgo.ApplicationCommand {
+	//nolint:revive
 	return []*discordgo.ApplicationCommand{
 		{
 			Name:        "pending",

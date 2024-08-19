@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/karatekaneen/stockybot"
 	"github.com/karatekaneen/stockybot/predictor"
-	"golang.org/x/sync/errgroup"
 )
 
 type prediction struct {
@@ -70,7 +71,7 @@ func (bot *DiscordBot) rankBuySignals(s *discordgo.Session, i *discordgo.Interac
 }
 
 func (bot *DiscordBot) getIndexPrices(ctx context.Context) ([]stockybot.PricePoint, error) {
-	indexPriceDoc, err := bot.dataRepository.PriceData(ctx, bot.cfg.IndexId)
+	indexPriceDoc, err := bot.dataRepository.PriceData(ctx, bot.cfg.IndexID)
 	if err != nil {
 		return nil, fmt.Errorf("get index price data: %w", err)
 	}

@@ -10,19 +10,19 @@ import (
 	"github.com/karatekaneen/stockybot"
 )
 
-func (b *DiscordBot) Watch(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (bot *DiscordBot) Watch(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 
 	opts := i.ApplicationCommandData().Options
 	if len(opts) < 1 {
-		b.log.Error("No subcommand specified, this should not happen")
+		bot.log.Error("No subcommand specified, this should not happen")
 		return
 	}
 
 	action := opts[0].Name
 
 	if action == "list" {
-		b.listWatchedSecurities(ctx, s, i)
+		bot.listWatchedSecurities(ctx, s, i)
 		return
 	}
 
@@ -36,31 +36,31 @@ func (b *DiscordBot) Watch(s *discordgo.Session, i *discordgo.InteractionCreate)
 	}
 
 	if ticker == "" {
-		b.log.Errorw("Ticker is empty", "options", optionMap)
+		bot.log.Errorw("Ticker is empty", "options", optionMap)
 		return
 	}
 
 	switch action {
 	case "add":
 		// FIXME: Add ticker as int64 here
-		if err := b.watchRepo.AddSubscription(ctx, 0, user.String()); err != nil {
-			b.log.Errorw("add subscription", "error", err.Error(), "user", user.String())
+		if err := bot.watchRepo.AddSubscription(ctx, 0, user.String()); err != nil {
+			bot.log.Errorw("add subscription", "error", err.Error(), "user", user.String())
 
 			errContent := "An error occurred when adding watch: %s" + err.Error()
 			if err := interactionResponse(s, i, errContent); err != nil {
-				b.log.Error(err)
+				bot.log.Error(err)
 			}
 
 			return
 		}
 	case "remove":
 		// FIXME: Add ticker as int64 here
-		if err := b.watchRepo.RemoveSubscription(ctx, 0, user.String()); err != nil {
-			b.log.Errorw("remove subscription", "error", err.Error(), "user", user.String())
+		if err := bot.watchRepo.RemoveSubscription(ctx, 0, user.String()); err != nil {
+			bot.log.Errorw("remove subscription", "error", err.Error(), "user", user.String())
 
 			errContent := "An error occurred when remove watch: %s" + err.Error()
 			if err := interactionResponse(s, i, errContent); err != nil {
-				b.log.Error(err)
+				bot.log.Error(err)
 			}
 
 			return
@@ -68,24 +68,24 @@ func (b *DiscordBot) Watch(s *discordgo.Session, i *discordgo.InteractionCreate)
 	}
 
 	if err := interactionResponse(s, i, "OK"); err != nil {
-		b.log.Error(err)
+		bot.log.Error(err)
 	}
 }
 
-func (b *DiscordBot) listWatchedSecurities(
+func (bot *DiscordBot) listWatchedSecurities(
 	ctx context.Context,
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 ) {
 	user := getUser(i)
 
-	securities, err := b.getWatchedSecurities(ctx, user)
+	securities, err := bot.getWatchedSecurities(ctx, user)
 	if err != nil {
-		b.log.Errorw("get watched securities", "error", err.Error(), "user", user.String())
+		bot.log.Errorw("get watched securities", "error", err.Error(), "user", user.String())
 
 		errContent := "An error occurred when fetching watched stocks: %s" + err.Error()
 		if err := interactionResponse(s, i, errContent); err != nil {
-			b.log.Error(err)
+			bot.log.Error(err)
 		}
 
 		return
@@ -109,15 +109,15 @@ func (b *DiscordBot) listWatchedSecurities(
 	}
 
 	if err := interactionResponse(s, i, content); err != nil {
-		b.log.Error(err)
+		bot.log.Error(err)
 	}
 }
 
-func (b *DiscordBot) getWatchedSecurities(
+func (bot *DiscordBot) getWatchedSecurities(
 	ctx context.Context,
 	user *discordgo.User,
 ) ([]stockybot.Security, error) {
-	watchedSecs, err := b.watchRepo.GetSubscribedSecurities(ctx, user.String())
+	watchedSecs, err := bot.watchRepo.GetSubscribedSecurities(ctx, user.String())
 	if err != nil {
 		return nil, fmt.Errorf("get subscribed securities: %w", err)
 	}

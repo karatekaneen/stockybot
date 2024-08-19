@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/karatekaneen/stockybot"
 	"github.com/pkg/errors"
+
+	"github.com/karatekaneen/stockybot"
 )
 
 type signalGroup struct {

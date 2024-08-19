@@ -5,13 +5,16 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/karatekaneen/stockybot/bot"
 	"github.com/karatekaneen/stockybot/config"
+	"github.com/karatekaneen/stockybot/db"
 	"github.com/karatekaneen/stockybot/firestore"
 	"github.com/karatekaneen/stockybot/predictor"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 func main() {
@@ -20,29 +23,59 @@ func main() {
 		log.Fatal(err)
 	}
 
-	l, err := createLogger(cfg.Log)
+	zaplog, err := createLogger(cfg.Log)
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger := l.Sugar()
 
-	ctx := context.Background()
+	logger := zaplog.Sugar()
 
-	db, err := firestore.New(ctx, cfg.DB)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sqlDB, err := db.New(ctx, cfg.SQLDB, logger)
 	if err != nil {
-		logger.Fatalln(err)
+		logger.Errorf("failed sql db init: %w", err)
+		return
 	}
 
-	b, err := bot.NewBot(cfg.Bot, l.Sugar(), db, predictor.New(cfg.Predictor, logger))
+	defer sqlDB.Close()
+
+	fireDB, err := firestore.New(ctx, cfg.FireDB)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Error(err)
+		return
 	}
 
-	defer b.Dispose()
+	b, err := bot.NewBot(
+		cfg.Bot,
+		zaplog.Sugar(),
+		fireDB,
+		predictor.New(cfg.Predictor, logger),
+		sqlDB,
+	)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	defer b.Dispose() //nolint:errcheck
+
+	errCh := make(chan error, 1)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+
+	go func() {
+		errCh <- sqlDB.ImportPeriodically(ctx, fireDB, 24*time.Hour) //nolint:mnd
+	}()
+
 	logger.Info("Press Ctrl+C to exit")
-	<-stop
+
+	select {
+	case <-stop:
+	case err := <-errCh:
+		logger.Error(err)
+	}
 
 	logger.Info("Gracefully shutting down.")
 }
@@ -58,5 +91,5 @@ func createLogger(cfg config.LogConfig) (*zap.Logger, error) {
 		loggerSettings.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
 
-	return loggerSettings.Build()
+	return loggerSettings.Build() //nolint:wrapcheck
 }
