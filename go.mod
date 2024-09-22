@@ -1,6 +1,6 @@
 module github.com/karatekaneen/stockybot
 
-go 1.21
+go 1.23
 
 require (
 	cloud.google.com/go/firestore v1.9.0
@@ -9,9 +9,9 @@ require (
 	github.com/bwmarrin/discordgo v0.26.1
 	github.com/carlmjohnson/requests v0.23.4
 	github.com/joho/godotenv v1.5.1
+	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/matryer/is v1.4.1
-	github.com/nats-io/nats-server/v2 v2.9.21
-	github.com/nats-io/nats.go v1.33.1
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/pkg/errors v0.9.1
 	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.6.0
@@ -35,12 +35,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.13.0 // indirect
-	github.com/klauspost/compress v1.17.7 // indirect
-	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
-	github.com/nats-io/jwt/v2 v2.4.1 // indirect
-	github.com/nats-io/nkeys v0.4.7 // indirect
-	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect

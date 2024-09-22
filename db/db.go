@@ -18,7 +18,7 @@ type SecurityProvider interface {
 }
 
 type DB struct {
-	client *ent.Client
+	Client *ent.Client
 	log    *zap.SugaredLogger
 }
 
@@ -45,11 +45,11 @@ func New(ctx context.Context, cfg Config, log *zap.SugaredLogger) (*DB, error) {
 		return nil, fmt.Errorf("failed creating schema resources: %w", err)
 	}
 
-	return &DB{client: client, log: log}, nil
+	return &DB{Client: client, log: log}, nil
 }
 
 func (db *DB) Close() error {
-	return db.client.Close() //nolint:wrapcheck
+	return db.Client.Close() //nolint:wrapcheck
 }
 
 func (db *DB) ImportPeriodically(
@@ -94,7 +94,7 @@ func (db *DB) ImportSecurities(ctx context.Context, provider SecurityProvider) e
 	created := 0
 
 	for _, sec := range secs {
-		err := db.client.Security.Create().
+		err := db.Client.Security.Create().
 			SetID(sec.ID).
 			SetName(sec.Name).
 			SetList(sec.List).
@@ -117,7 +117,7 @@ func (db *DB) ImportSecurities(ctx context.Context, provider SecurityProvider) e
 }
 
 func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID string) error {
-	exist, err := db.client.Watch.Query().
+	exist, err := db.Client.Watch.Query().
 		Where(
 			watch.UserID(userID),
 			watch.HasSecurityWith(security.ID(securityID)),
@@ -129,7 +129,7 @@ func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID stri
 		return fmt.Errorf("check if watch already exist: %w", err)
 	}
 
-	err = db.client.Watch.
+	err = db.Client.Watch.
 		Create().
 		SetUserID(userID).
 		SetSecurityID(securityID).
@@ -142,7 +142,7 @@ func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID stri
 }
 
 func (db *DB) RemoveSubscription(ctx context.Context, securityID int64, userID string) error {
-	w, err := db.client.Watch.Query().Where(
+	w, err := db.Client.Watch.Query().Where(
 		watch.UserID(userID),
 		watch.HasSecurityWith(security.ID(securityID)),
 	).First(ctx)
@@ -152,7 +152,7 @@ func (db *DB) RemoveSubscription(ctx context.Context, securityID int64, userID s
 		return stockybot.ErrNotFound
 	}
 
-	if err = db.client.Watch.DeleteOne(w).Exec(ctx); err != nil {
+	if err = db.Client.Watch.DeleteOne(w).Exec(ctx); err != nil {
 		return fmt.Errorf("delete watch: %w", err)
 	}
 
@@ -163,7 +163,7 @@ func (db *DB) GetSubscribedSecurities(
 	ctx context.Context,
 	userID string,
 ) ([]stockybot.Security, error) {
-	watching, err := db.client.Watch.
+	watching, err := db.Client.Watch.
 		Query().
 		Where(watch.UserID(userID)).
 		WithSecurity().
