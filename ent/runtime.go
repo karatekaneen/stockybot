@@ -22,12 +22,12 @@ func init() {
 	security.NameValidator = securityDescName.Validators[0].(func(string) error)
 	// securityDescCountry is the schema descriptor for country field.
 	securityDescCountry := securityFields[2].Descriptor()
-	// security.CountryValidator is a validator for the "country" field. It is called by the builders before save.
-	security.CountryValidator = securityDescCountry.Validators[0].(func(string) error)
+	// security.DefaultCountry holds the default value on creation for the country field.
+	security.DefaultCountry = securityDescCountry.Default.(string)
 	// securityDescList is the schema descriptor for list field.
 	securityDescList := securityFields[4].Descriptor()
-	// security.ListValidator is a validator for the "list" field. It is called by the builders before save.
-	security.ListValidator = securityDescList.Validators[0].(func(string) error)
+	// security.DefaultList holds the default value on creation for the list field.
+	security.DefaultList = securityDescList.Default.(string)
 	// securityDescID is the schema descriptor for id field.
 	securityDescID := securityFields[0].Descriptor()
 	// security.IDValidator is a validator for the "id" field. It is called by the builders before save.

@@ -12,9 +12,9 @@ var (
 	SecuritiesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
 		{Name: "name", Type: field.TypeString, Unique: true},
-		{Name: "country", Type: field.TypeString},
+		{Name: "country", Type: field.TypeString, Default: "Unspecified"},
 		{Name: "link_name", Type: field.TypeString, Nullable: true},
-		{Name: "list", Type: field.TypeString},
+		{Name: "list", Type: field.TypeString, Default: "Unspecified"},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"stock", "index"}},
 	}
 	// SecuritiesTable holds the schema information for the "securities" table.

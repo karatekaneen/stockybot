@@ -32,6 +32,14 @@ func (sc *SecurityCreate) SetCountry(s string) *SecurityCreate {
 	return sc
 }
 
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (sc *SecurityCreate) SetNillableCountry(s *string) *SecurityCreate {
+	if s != nil {
+		sc.SetCountry(*s)
+	}
+	return sc
+}
+
 // SetLinkName sets the "link_name" field.
 func (sc *SecurityCreate) SetLinkName(s string) *SecurityCreate {
 	sc.mutation.SetLinkName(s)
@@ -49,6 +57,14 @@ func (sc *SecurityCreate) SetNillableLinkName(s *string) *SecurityCreate {
 // SetList sets the "list" field.
 func (sc *SecurityCreate) SetList(s string) *SecurityCreate {
 	sc.mutation.SetList(s)
+	return sc
+}
+
+// SetNillableList sets the "list" field if the given value is not nil.
+func (sc *SecurityCreate) SetNillableList(s *string) *SecurityCreate {
+	if s != nil {
+		sc.SetList(*s)
+	}
 	return sc
 }
 
@@ -86,6 +102,7 @@ func (sc *SecurityCreate) Mutation() *SecurityMutation {
 
 // Save creates the Security in the database.
 func (sc *SecurityCreate) Save(ctx context.Context) (*Security, error) {
+	sc.defaults()
 	return withHooks(ctx, sc.sqlSave, sc.mutation, sc.hooks)
 }
 
@@ -111,6 +128,18 @@ func (sc *SecurityCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (sc *SecurityCreate) defaults() {
+	if _, ok := sc.mutation.Country(); !ok {
+		v := security.DefaultCountry
+		sc.mutation.SetCountry(v)
+	}
+	if _, ok := sc.mutation.List(); !ok {
+		v := security.DefaultList
+		sc.mutation.SetList(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (sc *SecurityCreate) check() error {
 	if _, ok := sc.mutation.Name(); !ok {
@@ -124,18 +153,8 @@ func (sc *SecurityCreate) check() error {
 	if _, ok := sc.mutation.Country(); !ok {
 		return &ValidationError{Name: "country", err: errors.New(`ent: missing required field "Security.country"`)}
 	}
-	if v, ok := sc.mutation.Country(); ok {
-		if err := security.CountryValidator(v); err != nil {
-			return &ValidationError{Name: "country", err: fmt.Errorf(`ent: validator failed for field "Security.country": %w`, err)}
-		}
-	}
 	if _, ok := sc.mutation.List(); !ok {
 		return &ValidationError{Name: "list", err: errors.New(`ent: missing required field "Security.list"`)}
-	}
-	if v, ok := sc.mutation.List(); ok {
-		if err := security.ListValidator(v); err != nil {
-			return &ValidationError{Name: "list", err: fmt.Errorf(`ent: validator failed for field "Security.list": %w`, err)}
-		}
 	}
 	if _, ok := sc.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Security.type"`)}
@@ -239,6 +258,7 @@ func (scb *SecurityCreateBulk) Save(ctx context.Context) ([]*Security, error) {
 	for i := range scb.builders {
 		func(i int, root context.Context) {
 			builder := scb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*SecurityMutation)
 				if !ok {

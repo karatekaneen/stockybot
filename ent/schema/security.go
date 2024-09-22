@@ -17,9 +17,9 @@ func (Security) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int64("id").Positive().Unique(),
 		field.String("name").NotEmpty().Unique(),
-		field.String("country").NotEmpty(),
+		field.String("country").Default("Unspecified"),
 		field.String("link_name").Optional(),
-		field.String("list").NotEmpty(),
+		field.String("list").Default("Unspecified"),
 		field.Enum("type").Values("stock", "index"),
 	}
 }

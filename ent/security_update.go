@@ -179,16 +179,6 @@ func (su *SecurityUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Security.name": %w`, err)}
 		}
 	}
-	if v, ok := su.mutation.Country(); ok {
-		if err := security.CountryValidator(v); err != nil {
-			return &ValidationError{Name: "country", err: fmt.Errorf(`ent: validator failed for field "Security.country": %w`, err)}
-		}
-	}
-	if v, ok := su.mutation.List(); ok {
-		if err := security.ListValidator(v); err != nil {
-			return &ValidationError{Name: "list", err: fmt.Errorf(`ent: validator failed for field "Security.list": %w`, err)}
-		}
-	}
 	if v, ok := su.mutation.GetType(); ok {
 		if err := security.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Security.type": %w`, err)}
@@ -454,16 +444,6 @@ func (suo *SecurityUpdateOne) check() error {
 	if v, ok := suo.mutation.Name(); ok {
 		if err := security.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Security.name": %w`, err)}
-		}
-	}
-	if v, ok := suo.mutation.Country(); ok {
-		if err := security.CountryValidator(v); err != nil {
-			return &ValidationError{Name: "country", err: fmt.Errorf(`ent: validator failed for field "Security.country": %w`, err)}
-		}
-	}
-	if v, ok := suo.mutation.List(); ok {
-		if err := security.ListValidator(v); err != nil {
-			return &ValidationError{Name: "list", err: fmt.Errorf(`ent: validator failed for field "Security.list": %w`, err)}
 		}
 	}
 	if v, ok := suo.mutation.GetType(); ok {

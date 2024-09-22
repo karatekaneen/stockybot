@@ -60,10 +60,10 @@ func ValidColumn(column string) bool {
 var (
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// CountryValidator is a validator for the "country" field. It is called by the builders before save.
-	CountryValidator func(string) error
-	// ListValidator is a validator for the "list" field. It is called by the builders before save.
-	ListValidator func(string) error
+	// DefaultCountry holds the default value on creation for the "country" field.
+	DefaultCountry string
+	// DefaultList holds the default value on creation for the "list" field.
+	DefaultList string
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
 	IDValidator func(int64) error
 )
