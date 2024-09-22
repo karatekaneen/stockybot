@@ -15,6 +15,7 @@ import (
 	"github.com/karatekaneen/stockybot/db"
 	"github.com/karatekaneen/stockybot/firestore"
 	"github.com/karatekaneen/stockybot/predictor"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
@@ -30,8 +31,9 @@ func main() {
 
 	logger := zaplog.Sugar()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
+
+	logger.Info("here")
 
 	sqlDB, err := db.New(ctx, cfg.SQLDB, logger)
 	if err != nil {
@@ -40,12 +42,22 @@ func main() {
 	}
 
 	defer sqlDB.Close()
+	logger.Info("here fs")
 
 	fireDB, err := firestore.New(ctx, cfg.FireDB)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
+
+	errCh := make(chan error, 1)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	logger.Info("here ch")
+	go func() {
+		errCh <- sqlDB.ImportPeriodically(ctx, fireDB, 24*time.Hour) //nolint:mnd
+	}()
 
 	b, err := bot.NewBot(
 		cfg.Bot,
@@ -60,14 +72,6 @@ func main() {
 	}
 
 	defer b.Dispose() //nolint:errcheck
-
-	errCh := make(chan error, 1)
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-
-	go func() {
-		errCh <- sqlDB.ImportPeriodically(ctx, fireDB, 24*time.Hour) //nolint:mnd
-	}()
 
 	logger.Info("Press Ctrl+C to exit")
 
