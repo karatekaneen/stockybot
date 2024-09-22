@@ -32,7 +32,7 @@ func Load(envPaths ...string) (Config, error) {
 
 	c := new(Config)
 
-	if err := kong.Parse(&c).Validate(); err != nil {
+	if err := kong.Parse(c).Validate(); err != nil {
 		return *c, fmt.Errorf("config validation: %w", err)
 	}
 
