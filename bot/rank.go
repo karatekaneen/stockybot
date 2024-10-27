@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bwmarrin/discordgo"
+	dscd "github.com/bwmarrin/discordgo"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/karatekaneen/stockybot"
@@ -21,31 +22,41 @@ type prediction struct {
 	score  float64
 }
 
-func (bot *DiscordBot) rankBuySignals(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	ctx, cancel := context.WithTimeout(context.Background(), bot.cfg.DefaultTimeout)
+type rankController struct {
+	log            *zap.SugaredLogger
+	cfg            Config
+	dataRepository dataRepository
+	predictor      *predictor.Predictor
+}
+
+func (rc *rankController) rankBuySignals(s *dscd.Session, i *dscd.InteractionCreate) error {
+	ctx, cancel := context.WithTimeout(context.Background(), rc.cfg.DefaultTimeout)
 	defer cancel()
 
-	bot.log.Info("Starting to fetch signals")
+	rc.log.Info("Starting to fetch signals")
 	interactionResponse(s, i, "Making predictions for buy signals, ignoring under 30%...")
 
 	// TODO: In the future you could make this and the request below concurrent
 
-	indexPrices, err := bot.getIndexPrices(ctx)
+	indexPrices, err := rc.getIndexPrices(ctx)
 	if err != nil {
-		bot.interactionErr(s, i, wrapErr(err, "get index prices: %w"))
-		return
+		err = wrapErr(err, "get index prices: %w")
+		interactionErr(s, i, err)
+		return err
 	}
 
-	pendingBuys, err := bot.getPendingBuys(ctx)
+	pendingBuys, err := rc.getPendingBuys(ctx)
 	if err != nil {
-		bot.interactionErr(s, i, wrapErr(err, "get pending buys: %w"))
-		return
+		err = wrapErr(err, "get pending buys: %w")
+		interactionErr(s, i, err)
+		return err
 	}
 
-	preds, err := bot.makePredictions(ctx, pendingBuys, indexPrices)
+	preds, err := rc.makePredictions(ctx, pendingBuys, indexPrices)
 	if err != nil {
-		bot.interactionErr(s, i, wrapErr(err, "make predictions: %w"))
-		return
+		err = wrapErr(err, "make predictions: %w")
+		interactionErr(s, i, err)
+		return err
 	}
 
 	slices.SortFunc(preds, asDescending)
@@ -64,14 +75,14 @@ func (bot *DiscordBot) rankBuySignals(s *discordgo.Session, i *discordgo.Interac
 	}
 
 	if err := followUpResponse(s, i.Interaction, strings.Join(summaries, "\n")); err != nil {
-		bot.log.Error(err)
-		return
+		return fmt.Errorf("send followup response: %w", err)
 	}
-	bot.log.Info("Sent response")
+
+	return nil
 }
 
-func (bot *DiscordBot) getIndexPrices(ctx context.Context) ([]stockybot.PricePoint, error) {
-	indexPriceDoc, err := bot.dataRepository.PriceData(ctx, bot.cfg.IndexID)
+func (rc *rankController) getIndexPrices(ctx context.Context) ([]stockybot.PricePoint, error) {
+	indexPriceDoc, err := rc.dataRepository.PriceData(ctx, rc.cfg.IndexID)
 	if err != nil {
 		return nil, fmt.Errorf("get index price data: %w", err)
 	}
@@ -84,28 +95,8 @@ func (bot *DiscordBot) getIndexPrices(ctx context.Context) ([]stockybot.PricePoi
 	return indexPrices, nil
 }
 
-func (bot *DiscordBot) interactionErr(
-	s *discordgo.Session,
-	i *discordgo.InteractionCreate,
-	err error,
-) error {
-	bot.log.Error(err)
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Content: "An error occured"},
-	})
-}
-
-func wrapErr(err error, wrapper string) error {
-	if err == nil {
-		return nil
-	}
-
-	return fmt.Errorf(wrapper, err)
-}
-
-func (bot *DiscordBot) getPendingBuys(ctx context.Context) ([]stockybot.Signal, error) {
-	pendingSignals, err := bot.dataRepository.PendingSignals(ctx)
+func (rc *rankController) getPendingBuys(ctx context.Context) ([]stockybot.Signal, error) {
+	pendingSignals, err := rc.dataRepository.PendingSignals(ctx)
 	if err != nil {
 		return nil, wrapErr(err, "get pending signals: %w")
 	}
@@ -121,7 +112,7 @@ func (bot *DiscordBot) getPendingBuys(ctx context.Context) ([]stockybot.Signal, 
 	return pendingBuys, nil
 }
 
-func (bot *DiscordBot) makePredictions(
+func (rc *rankController) makePredictions(
 	ctx context.Context,
 	pending []stockybot.Signal,
 	indexPrices []stockybot.PricePoint,
@@ -129,7 +120,7 @@ func (bot *DiscordBot) makePredictions(
 	preds := make([]prediction, 0, len(pending))
 	mut := &sync.Mutex{}
 
-	bot.log.Infof("Fetching predictions for %d pending signals", len(pending))
+	rc.log.Infof("Fetching predictions for %d pending signals", len(pending))
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(8)
@@ -138,9 +129,9 @@ func (bot *DiscordBot) makePredictions(
 		pendingSig := pendingSig // TODO: remove in 1.22
 
 		g.Go(func() error {
-			req, err := bot.createPredictionRequest(ctx, indexPrices, pendingSig.Stock.ID)
+			req, err := rc.createPredictionRequest(ctx, indexPrices, pendingSig.Stock.ID)
 			if err != nil {
-				bot.log.Errorw(
+				rc.log.Errorw(
 					"an error occured while making predictions. Ignoring.",
 					"id", pendingSig.Stock.ID,
 					"error", err,
@@ -148,7 +139,7 @@ func (bot *DiscordBot) makePredictions(
 				return nil
 			}
 
-			log := bot.log.With(
+			log := rc.log.With(
 				"id", pendingSig.Stock.ID,
 				"omx", len(req.OmxData),
 				"stock", len(req.StockData),
@@ -158,7 +149,7 @@ func (bot *DiscordBot) makePredictions(
 
 			log.Info("making prediction")
 
-			predictionScore, err := bot.predictor.SignalRank(ctx, *req)
+			predictionScore, err := rc.predictor.SignalRank(ctx, *req)
 			if err != nil {
 				log.Errorw("an error occured while making predictions. Ignoring.", "error", err)
 			} else {
@@ -180,17 +171,17 @@ func (bot *DiscordBot) makePredictions(
 	return preds, nil
 }
 
-func (bot *DiscordBot) createPredictionRequest(
+func (rc *rankController) createPredictionRequest(
 	ctx context.Context,
 	indexPrices []stockybot.PricePoint,
 	stockId int64,
 ) (*predictor.PredictionRequest, error) {
-	stockPriceDoc, err := bot.dataRepository.PriceData(ctx, stockId)
+	stockPriceDoc, err := rc.dataRepository.PriceData(ctx, stockId)
 	if err != nil {
 		return nil, fmt.Errorf("fetch prices for security: %d: %w", stockId, err)
 	}
 
-	signals, err := bot.dataRepository.Signals(ctx, stockId)
+	signals, err := rc.dataRepository.Signals(ctx, stockId)
 	if err != nil && errors.Is(err, stockybot.ErrNotFound) {
 		return nil, fmt.Errorf("fetch signals for security: %d: %w", stockId, err)
 	}

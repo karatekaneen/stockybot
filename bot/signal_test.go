@@ -52,9 +52,9 @@ func Test_daysSinceLast(t *testing.T) {
 
 func Test_numberOfExitsSince(t *testing.T) {
 	tests := []struct {
+		limit   time.Time
 		name    string
 		signals []stockybot.Signal
-		limit   time.Time
 		want    int
 	}{
 		{

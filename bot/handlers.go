@@ -1,15 +1,12 @@
 package bot
 
-import (
-	"github.com/bwmarrin/discordgo"
-)
-
-func (bot *DiscordBot) getHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	return map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"pending":  bot.pendingSignals,
-		"rankbuys": bot.rankBuySignals,
-	}
-}
+// func (bot *DiscordBot) getHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+// 	return map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+// 		"pending":  bot.pendingSignals,
+// 		"rankbuys": bot.rankBuySignals,
+// 		"watch":    bot.Watch,
+// 	}
+// }
 
 // var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 // 	"basic-command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {

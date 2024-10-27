@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/karatekaneen/stockybot"
 )
@@ -25,19 +25,18 @@ type dataRepository interface {
 	Security(ctx context.Context, id int64) (*stockybot.Security, error)
 }
 
-func mapOptions(
-	options []*discordgo.ApplicationCommandInteractionDataOption,
-) map[string]*discordgo.ApplicationCommandInteractionDataOption {
-	optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
-	for _, opt := range options {
-		optionMap[opt.Name] = opt
-	}
-
-	return optionMap
+type signalController struct {
+	log               *zap.SugaredLogger
+	dataRepository    dataRepository
+	defaultStockLists map[string]struct{}
+	cfg               Config
 }
 
-func (bot *DiscordBot) pendingSignals(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	ctx, cancel := context.WithTimeout(context.Background(), bot.cfg.DefaultTimeout)
+func (sc *signalController) pendingSignals(
+	s *discordgo.Session,
+	i *discordgo.InteractionCreate,
+) error {
+	ctx, cancel := context.WithTimeout(context.Background(), sc.cfg.DefaultTimeout)
 	defer cancel()
 
 	// Access options in the order provided by the user.
@@ -48,29 +47,28 @@ func (bot *DiscordBot) pendingSignals(s *discordgo.Session, i *discordgo.Interac
 		allLists = opt.BoolValue()
 	}
 
-	bot.log.Info("Starting to fetch signals")
+	sc.log.Info("Starting to fetch signals")
 
-	signals, err := bot.dataRepository.PendingSignals(ctx)
+	signals, err := sc.dataRepository.PendingSignals(ctx)
 	if err != nil {
-		bot.log.Errorln(errors.Wrap(err, "Pending signal fetch:"))
 		interactionResponse(s, i, "An error occured")
-		return
+		return fmt.Errorf("get pending signals: %w", err)
 	}
-	bot.log.Infow("Fetched signals", "signals", len(signals))
+
+	sc.log.Infow("Fetched signals", "signals", len(signals))
 
 	// Group signals by list and type
 	groupedSignals := groupSignals(signals)
 
 	// Create strings for each list and type
-	content := signalsByListAndType(groupedSignals, bot.defaultStockLists, allLists)
+	content := signalsByListAndType(groupedSignals, sc.defaultStockLists, allLists)
 
-	bot.log.Info("Starting sending response")
+	sc.log.Info("Starting sending response")
 	if err := interactionResponse(s, i, strings.Join(content, "\n")); err != nil {
-		bot.log.Error(err)
-		return
+		return fmt.Errorf("send response: %w", err)
 	}
 
-	bot.log.Info("Sent response")
+	return nil
 }
 
 func daysSinceLast(signals []stockybot.Signal, now time.Time) int {
@@ -161,34 +159,4 @@ func stockNames(signals []stockybot.Signal) []string {
 	}
 
 	return stockNames
-}
-
-func followUpResponse(
-	s *discordgo.Session,
-	i *discordgo.Interaction,
-	content string,
-) error {
-	_, err := s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{Content: content})
-	return err
-	// return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-	// 	// Ignore type for now, they will be discussed in "responses"
-	// 	Type: discordgo.InteractionResponseChannelMessageWithSource,
-	// 	Data: &discordgo.InteractionResponseData{
-	// 		Content: content,
-	// 	},
-	// })
-}
-
-func interactionResponse(
-	s *discordgo.Session,
-	i *discordgo.InteractionCreate,
-	content string,
-) error {
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		// Ignore type for now, they will be discussed in "responses"
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: content,
-		},
-	})
 }

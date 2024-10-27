@@ -3,10 +3,10 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/karatekaneen/stockybot"
@@ -17,17 +17,15 @@ type subscriptionRepository interface {
 	AddSubscription(ctx context.Context, securityID int64, userID string) error
 	RemoveSubscription(ctx context.Context, securityID int64, userID string) error
 	GetSubscribedSecurities(ctx context.Context, userID string) ([]stockybot.Security, error)
+	GetAllStockNames(ctx context.Context) ([]string, error)
 }
 
 type DiscordBot struct {
-	predictor         *predictor.Predictor
-	dataRepository    dataRepository
-	watchRepo         subscriptionRepository
-	session           *discordgo.Session
-	log               *zap.SugaredLogger
-	defaultStockLists map[string]struct{}
-	commands          []*discordgo.ApplicationCommand
-	cfg               Config
+	session  *discordgo.Session
+	log      *zap.SugaredLogger
+	router   *router
+	commands []*discordgo.ApplicationCommand
+	cfg      Config
 }
 
 //nolint:revive
@@ -48,50 +46,32 @@ func NewBot(
 ) (*DiscordBot, error) {
 	session, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
-		return nil, errors.Wrap(err, "Invalid bot parameters")
+		return nil, fmt.Errorf("instantiate bot: %w", err)
 	}
 
+	router := newRouter(config, log, repo, pred)
+
 	bot := &DiscordBot{
-		session:        session,
-		cfg:            config,
-		log:            log,
-		dataRepository: repo,
-		watchRepo:      watchRepo,
-		predictor:      pred,
-		defaultStockLists: map[string]struct{}{
-			"Small Cap Stockholm":  {},
-			"Mid Cap Stockholm":    {},
-			"Large Cap Stockholm":  {},
-			"Large Cap Copenhagen": {},
-		},
+		session: session,
+		cfg:     config,
+		log:     log,
+		router:  router,
 	}
 
 	// Register handlers
-	bot.registerHandlers()
+	bot.session.AddHandler(router.Handle)
 
 	// Authenticate
 	if err := bot.authenticate(); err != nil {
-		return nil, errors.Wrap(err, "Could not authenticate")
+		return nil, fmt.Errorf("discord authentication: %w", err)
 	}
 
 	// Register commands
-	if err := bot.registerCommands(bot.listCommands()); err != nil {
-		return nil, errors.Wrap(err, "Could not authenticate")
+	if err := bot.registerCommands(router.Commands()); err != nil {
+		return nil, fmt.Errorf("register commands: %w", err)
 	}
 
 	return bot, nil
-}
-
-// registerHandlers adds functionality similar to a router where it maps
-// the incoming command to its designated handler
-func (bot *DiscordBot) registerHandlers() {
-	handlers := bot.getHandlers()
-
-	bot.session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if handleFunc, ok := handlers[i.ApplicationCommandData().Name]; ok {
-			handleFunc(s, i) // TODO: Add errors here
-		}
-	})
 }
 
 // registerCommands lets the Discord server know what functionality the bot provides
@@ -107,7 +87,7 @@ func (bot *DiscordBot) registerCommands(commands []*discordgo.ApplicationCommand
 			rawCmd,
 		)
 		if err != nil {
-			return errors.Wrapf(err, "Cannot create '%v'", rawCmd.Name)
+			return fmt.Errorf("create command %q: %w", rawCmd.Name, err)
 		}
 
 		registeredCommands[i] = cmd
@@ -124,7 +104,7 @@ func (bot *DiscordBot) authenticate() error {
 	})
 
 	if err := bot.session.Open(); err != nil {
-		return errors.Wrap(err, "could not open session")
+		return fmt.Errorf("open session: %w", err)
 	}
 
 	return nil
@@ -143,7 +123,7 @@ func (bot *DiscordBot) Dispose() error {
 				cmd.ID,
 			)
 			if err != nil {
-				return errors.Wrapf(err, "Cannot delete '%v'", cmd.Name)
+				return fmt.Errorf("delete command %q: %w", cmd.Name, err)
 			}
 		}
 	}
