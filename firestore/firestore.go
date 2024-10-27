@@ -2,10 +2,10 @@ package firestore
 
 import (
 	"context"
+	"fmt"
 
 	"cloud.google.com/go/firestore"
 	"github.com/karatekaneen/stockybot"
-	"github.com/pkg/errors"
 )
 
 type FireDB struct {
@@ -25,7 +25,7 @@ func (*FireDB) Security(ctx context.Context, id int64) (*stockybot.Security, err
 func New(ctx context.Context, cfg Config) (*FireDB, error) {
 	client, err := firestore.NewClient(ctx, cfg.ProjectID)
 	if err != nil {
-		return nil, errors.Wrap(err, "firestore init:")
+		return nil, fmt.Errorf("init firestore: %w", err)
 	}
 
 	f := &FireDB{client}

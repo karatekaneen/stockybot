@@ -12,7 +12,6 @@ require (
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/matryer/is v1.4.1
 	github.com/mattn/go-sqlite3 v1.14.16
-	github.com/pkg/errors v0.9.1
 	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/api v0.103.0
@@ -36,6 +35,7 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.13.0 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect

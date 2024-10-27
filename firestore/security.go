@@ -2,9 +2,9 @@ package firestore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 
 	"github.com/karatekaneen/stockybot"
