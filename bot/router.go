@@ -1,31 +1,38 @@
 package bot
 
 import (
-	"github.com/bwmarrin/discordgo"
-	"github.com/karatekaneen/stockybot/predictor"
+	"fmt"
+
+	dscd "github.com/bwmarrin/discordgo"
 	"go.uber.org/zap"
+
+	"github.com/karatekaneen/stockybot/predictor"
 )
 
 // FIXME:
 // - watch ska ha autocomplete på add och remove
 
-type interactionHandler func(s *discordgo.Session, i *discordgo.InteractionCreate) error
+type interactionHandler func(s *dscd.Session, i *dscd.InteractionCreate) error
 
 type action struct {
-	command  *discordgo.ApplicationCommand
-	handlers map[discordgo.InteractionType]interactionHandler
+	command *dscd.ApplicationCommand
+	// The interaction type can be thought of similar to a
+	// HTTP method such as POST, GET, etc. It will define
+	// what kind of interaction that will happen. The handler
+	// is then responsible of doing it.
+	handlers map[dscd.InteractionType]interactionHandler
 	name     string
 }
 
-func (a *action) Command() *discordgo.ApplicationCommand {
+func (a *action) Command() *dscd.ApplicationCommand {
 	return a.command
 }
 
 type router struct {
 	logger    *zap.SugaredLogger
 	ranker    *rankController
+	watcher   *watchController
 	signaller *signalController
-	commands  []action
 }
 
 func newRouter(
@@ -33,6 +40,7 @@ func newRouter(
 	log *zap.SugaredLogger,
 	repo dataRepository,
 	pred *predictor.Predictor,
+	subRepo subscriptionRepository,
 ) *router {
 	return &router{
 		logger: log.Named("router"),
@@ -47,6 +55,10 @@ func newRouter(
 				"Large Cap Copenhagen": {},
 			},
 		},
+		watcher: &watchController{
+			log:       log,
+			watchRepo: subRepo,
+		},
 		ranker: &rankController{
 			log:            log,
 			cfg:            config,
@@ -56,13 +68,13 @@ func newRouter(
 	}
 }
 
-func (r *router) Handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (r *router) Handle(s *dscd.Session, i *dscd.InteractionCreate) {
 	logger := r.logger.With(
 		"command", i.ApplicationCommandData().Name,
 		"type", i.Type,
 	)
 
-	for _, foo := range r.commands {
+	for _, foo := range r.actions() {
 		if foo.name != i.ApplicationCommandData().Name {
 			continue
 		}
@@ -74,14 +86,29 @@ func (r *router) Handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		if err := handler(s, i); err != nil {
 			logger.Error(err)
+
+			// Send the error to the user
+			errContent := fmt.Sprintf(
+				"An error occurred when performing command %s: %v",
+				i.ApplicationCommandData().Name,
+				err,
+			)
+			if err := interactionResponse(s, i, errContent); err != nil {
+				logger.Error(err)
+			}
 		}
+		return
 	}
 
 	logger.Error("No handler found")
+
+	if err := interactionResponse(s, i, "No event handler found"); err != nil {
+		logger.Error(err)
+	}
 }
 
-func (r *router) Commands() []*discordgo.ApplicationCommand {
-	cmds := []*discordgo.ApplicationCommand{}
+func (r *router) Commands() []*dscd.ApplicationCommand {
+	cmds := []*dscd.ApplicationCommand{}
 
 	for _, cmd := range r.actions() {
 		cmds = append(cmds, cmd.Command())
@@ -94,68 +121,81 @@ func (r *router) actions() []action {
 	return []action{
 		{
 			name: "pending",
-			handlers: map[discordgo.InteractionType]interactionHandler{
-				discordgo.InteractionApplicationCommand: r.signaller.pendingSignals,
+			handlers: map[dscd.InteractionType]interactionHandler{
+				dscd.InteractionApplicationCommand: r.signaller.pendingSignals,
 			},
-			command: &discordgo.ApplicationCommand{
+			command: &dscd.ApplicationCommand{
 				Name:        "pending",
 				Description: "List pending signals",
-				Options: []*discordgo.ApplicationCommandOption{
+				Options: []*dscd.ApplicationCommandOption{
 					{
-						Type:        discordgo.ApplicationCommandOptionBoolean,
+						Type:        dscd.ApplicationCommandOptionBoolean,
 						Name:        "all-lists",
 						Description: "Show signals from all lists. Only listing Swedish Large, Mid and Small cap if false",
 					},
 				},
 			},
 		},
+
 		{
 			name: "rankbuys",
-			handlers: map[discordgo.InteractionType]interactionHandler{
-				discordgo.InteractionApplicationCommand: r.ranker.rankBuySignals,
+			handlers: map[dscd.InteractionType]interactionHandler{
+				dscd.InteractionApplicationCommand: r.ranker.rankBuySignals,
 			},
-			command: &discordgo.ApplicationCommand{
+			command: &dscd.ApplicationCommand{
 				Name:        "rankbuys",
 				Description: "List pending buy signals by signal predicted ranking",
 			},
 		},
+
 		{
-			// FIXME: Add handlers here
-			name: "watch",
-			command: &discordgo.ApplicationCommand{
-				Name:        "watch",
-				Description: "Add or remove subscriptions of stocks",
-				Options: []*discordgo.ApplicationCommandOption{
+			name: "watch-list",
+			handlers: map[dscd.InteractionType]interactionHandler{
+				dscd.InteractionApplicationCommand: r.watcher.List,
+			},
+			command: &dscd.ApplicationCommand{
+				Name:        "watch-list",
+				Description: "List your subscriptions",
+			},
+		},
+
+		{
+			name: "watch-add",
+			handlers: map[dscd.InteractionType]interactionHandler{
+				dscd.InteractionApplicationCommand:             r.watcher.AddCommit,
+				dscd.InteractionApplicationCommandAutocomplete: r.watcher.AddAutocomplete,
+			},
+
+			command: &dscd.ApplicationCommand{
+				Name:        "watch-add",
+				Description: "Add a new subscription of a stock",
+				Options: []*dscd.ApplicationCommandOption{
 					{
-						Name:        "list",
-						Description: "List your subscriptions",
-						Type:        discordgo.ApplicationCommandOptionSubCommand,
+						Type:         dscd.ApplicationCommandOptionString,
+						Name:         "ticker",
+						Description:  "Ticker of the stock you want to subscribe to",
+						Required:     true,
+						Autocomplete: true,
 					},
+				},
+			},
+		},
+
+		{
+			name: "watch-remove",
+			// FIXME: Add handler
+			// FIXME: Use subscripted stocks as base for autocomplete
+			command: &dscd.ApplicationCommand{
+				Name:        "watch-remove",
+				Description: "remove a subscription of stocks",
+				Options: []*dscd.ApplicationCommandOption{
 					{
-						Name:        "add",
-						Description: "Add subscription of a stock",
-						Type:        discordgo.ApplicationCommandOptionSubCommand,
-						Options: []*discordgo.ApplicationCommandOption{
-							{
-								Type:        discordgo.ApplicationCommandOptionString,
-								Name:        "ticker",
-								Description: "Ticker of the stock you want to subscribe to",
-								Required:    true,
-							},
-						},
-					},
-					{
-						Name:        "remove",
-						Description: "Remove subscription of a stock",
-						Type:        discordgo.ApplicationCommandOptionSubCommand,
-						Options: []*discordgo.ApplicationCommandOption{
-							{
-								Type:        discordgo.ApplicationCommandOptionString,
-								Name:        "ticker",
-								Description: "Ticker of the stock you want to subscribe to",
-								Required:    true,
-							},
-						},
+						// FIXME: Make to autocomplete
+						Type:         dscd.ApplicationCommandOptionString,
+						Name:         "ticker",
+						Description:  "Ticker of the stock you want to subscribe to",
+						Required:     true,
+						Autocomplete: true,
 					},
 				},
 			},

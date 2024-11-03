@@ -116,12 +116,14 @@ func (db *DB) ImportSecurities(ctx context.Context, provider SecurityProvider) e
 	return nil
 }
 
-func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID string) error {
+func (db *DB) AddSubscription(ctx context.Context, stockName string, userID string) error {
+	stock, err := db.Client.Security.Query().Where(security.Name(stockName)).First(ctx)
+	if err != nil {
+		return fmt.Errorf("get stock for adding subscription to with name %q: %w", stockName, err)
+	}
+
 	exist, err := db.Client.Watch.Query().
-		Where(
-			watch.UserID(userID),
-			watch.HasSecurityWith(security.ID(securityID)),
-		).
+		Where(watch.UserID(userID), watch.HasSecurityWith(security.ID(stock.ID))).
 		Exist(ctx)
 	if exist {
 		return nil
@@ -132,19 +134,28 @@ func (db *DB) AddSubscription(ctx context.Context, securityID int64, userID stri
 	err = db.Client.Watch.
 		Create().
 		SetUserID(userID).
-		SetSecurityID(securityID).
+		SetSecurityID(stock.ID).
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf("create watch for user %q on security %d: %w", userID, securityID, err)
+		return fmt.Errorf("create watch for user %q on security %d: %w", userID, stock.ID, err)
 	}
 
 	return nil
 }
 
-func (db *DB) RemoveSubscription(ctx context.Context, securityID int64, userID string) error {
+func (db *DB) RemoveSubscription(ctx context.Context, stockName string, userID string) error {
+	stock, err := db.Client.Security.Query().Where(security.Name(stockName)).First(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"get stock for removing subscription from with name %q: %w",
+			stockName,
+			err,
+		)
+	}
+
 	w, err := db.Client.Watch.Query().Where(
 		watch.UserID(userID),
-		watch.HasSecurityWith(security.ID(securityID)),
+		watch.HasSecurityWith(security.ID(stock.ID)),
 	).First(ctx)
 	if err != nil && !ent.IsNotFound(err) {
 		return fmt.Errorf("fetch watch to remove: %w", err)
@@ -188,4 +199,19 @@ func (db *DB) GetSubscribedSecurities(
 	}
 
 	return watchedSecurities, nil
+}
+
+func (db *DB) GetAllStockNames(ctx context.Context) ([]string, error) {
+	stocks, err := db.Client.Security.Query().Select(security.FieldName).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch all stocks: %w", err)
+	}
+
+	names := make([]string, 0, len(stocks))
+
+	for _, s := range stocks {
+		names = append(names, s.Name)
+	}
+
+	return names, nil
 }

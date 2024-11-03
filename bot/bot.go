@@ -14,8 +14,8 @@ import (
 )
 
 type subscriptionRepository interface {
-	AddSubscription(ctx context.Context, securityID int64, userID string) error
-	RemoveSubscription(ctx context.Context, securityID int64, userID string) error
+	AddSubscription(ctx context.Context, stockName string, userID string) error
+	RemoveSubscription(ctx context.Context, stockName string, userID string) error
 	GetSubscribedSecurities(ctx context.Context, userID string) ([]stockybot.Security, error)
 	GetAllStockNames(ctx context.Context) ([]string, error)
 }
@@ -49,7 +49,7 @@ func NewBot(
 		return nil, fmt.Errorf("instantiate bot: %w", err)
 	}
 
-	router := newRouter(config, log, repo, pred)
+	router := newRouter(config, log, repo, pred, watchRepo)
 
 	bot := &DiscordBot{
 		session: session,
