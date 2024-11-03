@@ -2,16 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"sort"
 
-	"github.com/karatekaneen/stockybot/config"
-	"github.com/karatekaneen/stockybot/db"
-	"github.com/karatekaneen/stockybot/ent/security"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/karatekaneen/stockybot/config"
+	"github.com/karatekaneen/stockybot/db"
 )
 
 func createLogger(cfg config.LogConfig) (*zap.Logger, error) {
@@ -51,18 +50,9 @@ func main() {
 
 	defer sqlDB.Close()
 
-	names := []string{}
+	x := sqlDB.Client.Watch.Query().AllX(ctx)
 
-	for _, s := range sqlDB.Client.Security.Query().Select(security.FieldName).AllX(ctx) {
-		names = append(names, s.Name)
-	}
-
-	logger.Info(names)
-
-	result := fuzzy.RankFindNormalizedFold("invest", names)
-	sort.Sort(result)
-
-	for i, item := range result {
-		logger.Info(i, item.Target)
+	for _, item := range x {
+		fmt.Printf("%+v\n", item)
 	}
 }

@@ -71,6 +71,14 @@ func NewBot(
 		return nil, fmt.Errorf("register commands: %w", err)
 	}
 
+	_, err = bot.session.ChannelMessageSend(
+		"1043847870861811807",
+		"hello there <@344808325394726912>",
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return bot, nil
 }
 

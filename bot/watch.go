@@ -18,7 +18,7 @@ type watchController struct {
 func (wc *watchController) List(s *dscd.Session, i *dscd.InteractionCreate) error {
 	ctx := context.Background()
 
-	securities, err := wc.watchRepo.GetSubscribedSecurities(ctx, getUser(i).String())
+	securities, err := wc.watchRepo.GetSubscribedSecurities(ctx, getUser(i).ID)
 	if err != nil {
 		return fmt.Errorf("get watched securities: %w", err)
 	}
@@ -49,7 +49,6 @@ func (wc *watchController) List(s *dscd.Session, i *dscd.InteractionCreate) erro
 
 func (wc *watchController) AddCommit(s *dscd.Session, i *dscd.InteractionCreate) error {
 	ctx := context.Background()
-	user := getUser(i)
 
 	// Access options in the order provided by the user.
 	optionMap := mapOptions(i.ApplicationCommandData().Options)
@@ -65,7 +64,7 @@ func (wc *watchController) AddCommit(s *dscd.Session, i *dscd.InteractionCreate)
 		return errors.New("no ticker provided")
 	}
 
-	if err := wc.watchRepo.AddSubscription(ctx, ticker, user.String()); err != nil {
+	if err := wc.watchRepo.AddSubscription(ctx, ticker, getUser(i).ID); err != nil {
 		return fmt.Errorf("add subscription: %w", err)
 	}
 
@@ -113,7 +112,6 @@ func (wc *watchController) AddAutocomplete(s *dscd.Session, i *dscd.InteractionC
 
 func (wc *watchController) RemoveCommit(s *dscd.Session, i *dscd.InteractionCreate) error {
 	ctx := context.Background()
-	user := getUser(i)
 
 	// Access options in the order provided by the user.
 	optionMap := mapOptions(i.ApplicationCommandData().Options)
@@ -129,7 +127,7 @@ func (wc *watchController) RemoveCommit(s *dscd.Session, i *dscd.InteractionCrea
 		return errors.New("no ticker provided")
 	}
 
-	if err := wc.watchRepo.RemoveSubscription(ctx, ticker, user.String()); err != nil {
+	if err := wc.watchRepo.RemoveSubscription(ctx, ticker, getUser(i).ID); err != nil {
 		return fmt.Errorf("remove subscription: %w", err)
 	}
 
@@ -151,7 +149,7 @@ func (wc *watchController) RemoveAutocomplete(s *dscd.Session, i *dscd.Interacti
 		partialTicker = opt.StringValue()
 	}
 
-	watched, err := wc.watchRepo.GetSubscribedSecurities(ctx, getUser(i).String())
+	watched, err := wc.watchRepo.GetSubscribedSecurities(ctx, getUser(i).ID)
 	if err != nil {
 		return fmt.Errorf("get watched securities: %w", err)
 	}
