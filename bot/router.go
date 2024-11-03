@@ -165,7 +165,6 @@ func (r *router) actions() []action {
 				dscd.InteractionApplicationCommand:             r.watcher.AddCommit,
 				dscd.InteractionApplicationCommandAutocomplete: r.watcher.AddAutocomplete,
 			},
-
 			command: &dscd.ApplicationCommand{
 				Name:        "watch-add",
 				Description: "Add a new subscription of a stock",
@@ -183,14 +182,15 @@ func (r *router) actions() []action {
 
 		{
 			name: "watch-remove",
-			// FIXME: Add handler
-			// FIXME: Use subscripted stocks as base for autocomplete
+			handlers: map[dscd.InteractionType]interactionHandler{
+				dscd.InteractionApplicationCommand:             r.watcher.RemoveCommit,
+				dscd.InteractionApplicationCommandAutocomplete: r.watcher.RemoveAutocomplete,
+			},
 			command: &dscd.ApplicationCommand{
 				Name:        "watch-remove",
 				Description: "remove a subscription of stocks",
 				Options: []*dscd.ApplicationCommandOption{
 					{
-						// FIXME: Make to autocomplete
 						Type:         dscd.ApplicationCommandOptionString,
 						Name:         "ticker",
 						Description:  "Ticker of the stock you want to subscribe to",

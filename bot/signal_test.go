@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/karatekaneen/stockybot"
 	"github.com/matryer/is"
+
+	"github.com/karatekaneen/stockybot"
 )
 
 func Test_daysSinceLast(t *testing.T) {

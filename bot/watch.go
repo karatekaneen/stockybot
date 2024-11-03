@@ -75,10 +75,6 @@ func (wc *watchController) AddCommit(s *dscd.Session, i *dscd.InteractionCreate)
 	)
 }
 
-func applicationCommandOptionChoice(item string) *dscd.ApplicationCommandOptionChoice {
-	return &dscd.ApplicationCommandOptionChoice{Name: item, Value: item}
-}
-
 func (wc *watchController) AddAutocomplete(s *dscd.Session, i *dscd.InteractionCreate) error {
 	ctx := context.Background()
 	maxResultLen := 10
@@ -98,7 +94,7 @@ func (wc *watchController) AddAutocomplete(s *dscd.Session, i *dscd.InteractionC
 
 	choices := make([]*dscd.ApplicationCommandOptionChoice, 0, maxResultLen)
 
-	// No search, just grab first 25 stocks if not filtered by fuzzyfind
+	// No search, just grab first N stocks if not filtered by fuzzyfind
 	allChoices := stockNames
 	if partialTicker != "" {
 		allChoices = fuzzyFindNItems(stockNames, partialTicker, maxResultLen)
@@ -115,62 +111,79 @@ func (wc *watchController) AddAutocomplete(s *dscd.Session, i *dscd.InteractionC
 	return wrapErr(autocompleteResponse(s, i, choices), "respond to AddAutocomplete: %w")
 }
 
-// func (wc *watchController) Watch(s *dscd.Session, i *dscd.InteractionCreate) {
-// 	ctx := context.Background()
-//
-// 	opts := i.ApplicationCommandData().Options
-// 	if len(opts) < 1 {
-// 		wc.log.Error("No subcommand specified, this should not happen")
-// 		return
-// 	}
-//
-// 	action := opts[0].Name
-//
-// 	user := getUser(i)
-//
-// 	optionMap := mapOptions(opts[0].Options)
-// 	ticker := ""
-//
-// 	if opt, ok := optionMap["ticker"]; ok {
-// 		ticker = opt.StringValue()
-// 	}
-//
-// 	if ticker == "" {
-// 		wc.log.Errorw("Ticker is empty", "options", optionMap)
-// 		return
-// 	}
-//
-// 	switch action {
-// 	case "add":
-// 		// FIXME: Add ticker as int64 here
-// 		if err := wc.watchRepo.AddSubscription(ctx, 0, user.String()); err != nil {
-// 			wc.log.Errorw("add subscription", "error", err.Error(), "user", user.String())
-//
-// 			errContent := "An error occurred when adding watch: %s" + err.Error()
-// 			if err := interactionResponse(s, i, errContent); err != nil {
-// 				wc.log.Error(err)
-// 			}
-//
-// 			return
-// 		}
-// 	case "remove":
-// 		// FIXME: Add ticker as int64 here
-// 		if err := wc.watchRepo.RemoveSubscription(ctx, 0, user.String()); err != nil {
-// 			wc.log.Errorw("remove subscription", "error", err.Error(), "user", user.String())
-//
-// 			errContent := "An error occurred when remove watch: %s" + err.Error()
-// 			if err := interactionResponse(s, i, errContent); err != nil {
-// 				wc.log.Error(err)
-// 			}
-//
-// 			return
-// 		}
-// 	}
-//
-// 	if err := interactionResponse(s, i, "OK"); err != nil {
-// 		wc.log.Error(err)
-// 	}
-// }
+func (wc *watchController) RemoveCommit(s *dscd.Session, i *dscd.InteractionCreate) error {
+	ctx := context.Background()
+	user := getUser(i)
+
+	// Access options in the order provided by the user.
+	optionMap := mapOptions(i.ApplicationCommandData().Options)
+
+	ticker := ""
+
+	if opt := optionMap["ticker"]; opt != nil {
+		ticker = opt.StringValue()
+	}
+
+	if ticker == "" {
+		wc.log.Errorw("Ticker is empty", "options", optionMap)
+		return errors.New("no ticker provided")
+	}
+
+	if err := wc.watchRepo.RemoveSubscription(ctx, ticker, user.String()); err != nil {
+		return fmt.Errorf("remove subscription: %w", err)
+	}
+
+	return wrapErr(
+		interactionResponse(s, i, fmt.Sprintf("Removed watch of %q", ticker)),
+		"respond to RemoveCommit: %w",
+	)
+}
+
+func (wc *watchController) RemoveAutocomplete(s *dscd.Session, i *dscd.InteractionCreate) error {
+	ctx := context.Background()
+	maxResultLen := 24
+
+	optionMap := mapOptions(i.ApplicationCommandData().Options)
+
+	partialTicker := ""
+
+	if opt := optionMap["ticker"]; opt != nil {
+		partialTicker = opt.StringValue()
+	}
+
+	watched, err := wc.watchRepo.GetSubscribedSecurities(ctx, getUser(i).String())
+	if err != nil {
+		return fmt.Errorf("get watched securities: %w", err)
+	}
+
+	stockNames := make([]string, 0, len(watched))
+
+	for _, s := range watched {
+		stockNames = append(stockNames, s.Name)
+	}
+
+	choices := make([]*dscd.ApplicationCommandOptionChoice, 0, maxResultLen)
+
+	// No search, just grab first N stocks if not filtered by fuzzyfind
+	allChoices := stockNames
+	if partialTicker != "" {
+		allChoices = fuzzyFindNItems(stockNames, partialTicker, maxResultLen)
+	}
+
+	for i, item := range allChoices {
+		if i == maxResultLen {
+			break
+		}
+
+		choices = append(choices, applicationCommandOptionChoice(item))
+	}
+
+	return wrapErr(autocompleteResponse(s, i, choices), "respond to RemoveAutocomplete: %w")
+}
+
+func applicationCommandOptionChoice(item string) *dscd.ApplicationCommandOptionChoice {
+	return &dscd.ApplicationCommandOptionChoice{Name: item, Value: item}
+}
 
 func getUser(i *dscd.InteractionCreate) *dscd.User {
 	var user *dscd.User

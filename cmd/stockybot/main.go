@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/karatekaneen/stockybot/db"
 	"github.com/karatekaneen/stockybot/firestore"
 	"github.com/karatekaneen/stockybot/predictor"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
@@ -33,8 +33,6 @@ func main() {
 
 	ctx := context.Background()
 
-	logger.Info("here")
-
 	sqlDB, err := db.New(ctx, cfg.SQLDB, logger)
 	if err != nil {
 		logger.Errorf("failed sql db init: %w", err)
@@ -42,7 +40,6 @@ func main() {
 	}
 
 	defer sqlDB.Close()
-	logger.Info("here fs")
 
 	fireDB, err := firestore.New(ctx, cfg.FireDB)
 	if err != nil {
@@ -54,7 +51,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	logger.Info("here ch")
 	go func() {
 		errCh <- sqlDB.ImportPeriodically(ctx, fireDB, 24*time.Hour) //nolint:mnd
 	}()
