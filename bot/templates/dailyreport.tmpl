@@ -1,0 +1,18 @@
+{{- if .Buys -}} ### Buys
+{{ range $buy := .Buys }}
+- {{ printf "%.2f" $buy.Score }}% - {{ $buy.Signal.Stock.Name }}
+    {{- if $buy.Watchers }} (
+      {{- range $watcher := $buy.Watchers }}<@{{$watcher}}> {{ end -}}
+     ){{- end -}}
+{{- end}}
+{{- end }}
+
+{{ if .Sells -}} ### Sells
+{{ range $sell := .Sells }}
+- {{ $sell.Signal.Stock.Name }}
+    {{- if $sell.Watchers }} (
+      {{- range $watcher := $sell.Watchers }}<@{{$watcher}}> {{ end -}}
+     ){{- end -}}
+{{- end}}
+{{- end -}}
+

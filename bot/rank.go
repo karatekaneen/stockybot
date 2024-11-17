@@ -18,9 +18,11 @@ import (
 )
 
 type prediction struct {
-	signal stockybot.Signal
+	Signal stockybot.Signal
 	score  float64
 }
+
+func (p prediction) Score() float64 { return p.score * 100 }
 
 type rankController struct {
 	log            *zap.SugaredLogger
@@ -37,29 +39,27 @@ func (rc *rankController) rankBuySignals(s *dscd.Session, i *dscd.InteractionCre
 	interactionResponse(s, i, "Making predictions for buy signals, ignoring under 30%...")
 
 	// TODO: In the future you could make this and the request below concurrent
-
 	indexPrices, err := rc.getIndexPrices(ctx)
 	if err != nil {
 		err = wrapErr(err, "get index prices: %w")
-		interactionErr(s, i, err)
 		return err
 	}
 
-	pendingBuys, err := rc.getPendingBuys(ctx)
+	pending, err := rc.getGroupedPendingSigs(ctx)
 	if err != nil {
 		err = wrapErr(err, "get pending buys: %w")
 		interactionErr(s, i, err)
 		return err
 	}
 
-	preds, err := rc.makePredictions(ctx, pendingBuys, indexPrices)
+	preds, err := rc.makePredictions(ctx, pending.buys, indexPrices)
 	if err != nil {
 		err = wrapErr(err, "make predictions: %w")
 		interactionErr(s, i, err)
 		return err
 	}
 
-	slices.SortFunc(preds, asDescending)
+	slices.SortFunc(preds, asDescendingScore)
 
 	summaries := make([]string, 0, len(preds))
 
@@ -70,7 +70,7 @@ func (rc *rankController) rankBuySignals(s *dscd.Session, i *dscd.InteractionCre
 
 		summaries = append(
 			summaries,
-			fmt.Sprintf("- %.1f%% - %s", p.score*100, p.signal.Stock.Name),
+			fmt.Sprintf("- %.1f%% - %s", p.Score(), p.Signal.Stock.Name),
 		)
 	}
 
@@ -95,21 +95,27 @@ func (rc *rankController) getIndexPrices(ctx context.Context) ([]stockybot.Price
 	return indexPrices, nil
 }
 
-func (rc *rankController) getPendingBuys(ctx context.Context) ([]stockybot.Signal, error) {
+type groupedSignals struct {
+	buys, sells []stockybot.Signal
+}
+
+func (rc *rankController) getGroupedPendingSigs(ctx context.Context) (*groupedSignals, error) {
 	pendingSignals, err := rc.dataRepository.PendingSignals(ctx)
 	if err != nil {
 		return nil, wrapErr(err, "get pending signals: %w")
 	}
 
-	pendingBuys := []stockybot.Signal{}
+	pending := &groupedSignals{buys: []stockybot.Signal{}, sells: []stockybot.Signal{}}
 
 	for _, sig := range pendingSignals {
 		if sig.Action == "buy" {
-			pendingBuys = append(pendingBuys, sig)
+			pending.buys = append(pending.buys, sig)
+		} else {
+			pending.sells = append(pending.sells, sig)
 		}
 	}
 
-	return pendingBuys, nil
+	return pending, nil
 }
 
 func (rc *rankController) makePredictions(
@@ -157,7 +163,7 @@ func (rc *rankController) makePredictions(
 			}
 
 			mut.Lock()
-			preds = append(preds, prediction{signal: pendingSig, score: predictionScore})
+			preds = append(preds, prediction{Signal: pendingSig, score: predictionScore})
 			mut.Unlock()
 
 			return nil
@@ -199,11 +205,15 @@ func (rc *rankController) createPredictionRequest(
 	}, nil
 }
 
-func asDescending(a, b prediction) int {
+type scorer interface {
+	Score() float64
+}
+
+func asDescendingScore[T scorer](a, b T) int {
 	switch {
-	case a.score < b.score:
+	case a.Score() < b.Score():
 		return 1
-	case a.score > b.score:
+	case a.Score() > b.Score():
 		return -1
 	default:
 		return 0

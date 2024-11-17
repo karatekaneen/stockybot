@@ -16,6 +16,7 @@ import (
 type subscriptionRepository interface {
 	AddSubscription(ctx context.Context, stockName string, userID string) error
 	RemoveSubscription(ctx context.Context, stockName string, userID string) error
+	GetWatchersBySecurities(ctx context.Context, secIDs []int64) (map[int64][]string, error)
 	GetSubscribedSecurities(ctx context.Context, userID string) ([]stockybot.Security, error)
 	GetAllStockNames(ctx context.Context) ([]string, error)
 }
@@ -30,11 +31,13 @@ type DiscordBot struct {
 
 //nolint:revive
 type Config struct {
-	Token          string        `help:"Auth token"                                env:"TOKEN"           required:""`
-	GuildID        string        `help:"Guild ID to connect to"                    env:"GUILD_ID"        required:""`
-	DefaultTimeout time.Duration `help:"Default timeout for operations"            env:"DEFAULT_TIMEOUT"             default:"60s"`
-	IndexID        int64         `help:"The ID of the index to use as benchmark"   env:"MARKET_INDEX_ID"             default:"19002"`
-	RemoveCommands bool          `help:"If commands should be removed on shutdown" env:"REMOVE_COMMANDS"             default:"true"`
+	Token          string        `help:"Auth token"                                      env:"TOKEN"                required:""`
+	GuildID        string        `help:"Guild ID to connect to"                          env:"GUILD_ID"             required:""`
+	ChannelID      string        `help:"The default channel to post reports to"          env:"CHANNEL_ID"           required:""`
+	Schedule       string        `help:"Crontab schedule for generating daily summaries" env:"REPORT_CRON_SCHEDULE"             default:"5 20 * * *"`
+	DefaultTimeout time.Duration `help:"Default timeout for operations"                  env:"DEFAULT_TIMEOUT"                  default:"60s"`
+	IndexID        int64         `help:"The ID of the index to use as benchmark"         env:"MARKET_INDEX_ID"                  default:"19002"`
+	RemoveCommands bool          `help:"If commands should be removed on shutdown"       env:"REMOVE_COMMANDS"                  default:"true"`
 }
 
 func NewBot(
@@ -49,7 +52,7 @@ func NewBot(
 		return nil, fmt.Errorf("instantiate bot: %w", err)
 	}
 
-	router := newRouter(config, log, repo, pred, watchRepo)
+	router := newRouter(config, log, session, repo, pred, watchRepo)
 
 	bot := &DiscordBot{
 		session: session,
@@ -69,14 +72,6 @@ func NewBot(
 	// Register commands
 	if err := bot.registerCommands(router.Commands()); err != nil {
 		return nil, fmt.Errorf("register commands: %w", err)
-	}
-
-	_, err = bot.session.ChannelMessageSend(
-		"1043847870861811807",
-		"hello there <@344808325394726912>",
-	)
-	if err != nil {
-		return nil, err
 	}
 
 	return bot, nil

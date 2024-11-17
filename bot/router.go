@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 
+	"github.com/bwmarrin/discordgo"
 	dscd "github.com/bwmarrin/discordgo"
 	"go.uber.org/zap"
 
@@ -33,38 +34,49 @@ type router struct {
 	ranker    *rankController
 	watcher   *watchController
 	signaller *signalController
+	cron      *cronController
 }
 
 func newRouter(
 	config Config,
 	log *zap.SugaredLogger,
+	session *discordgo.Session,
 	repo dataRepository,
 	pred *predictor.Predictor,
 	subRepo subscriptionRepository,
 ) *router {
+	signaller := &signalController{
+		log:            log,
+		cfg:            config,
+		dataRepository: repo,
+		defaultStockLists: map[string]struct{}{
+			"Small Cap Stockholm":  {},
+			"Mid Cap Stockholm":    {},
+			"Large Cap Stockholm":  {},
+			"Large Cap Copenhagen": {},
+		},
+	}
+
+	watcher := &watchController{
+		log:       log,
+		watchRepo: subRepo,
+	}
+
+	ranker := &rankController{
+		log:            log,
+		cfg:            config,
+		dataRepository: repo,
+		predictor:      pred,
+	}
+
+	cron := newCronController(config, log, session, ranker, subRepo)
+
 	return &router{
-		logger: log.Named("router"),
-		signaller: &signalController{
-			log:            log,
-			cfg:            config,
-			dataRepository: repo,
-			defaultStockLists: map[string]struct{}{
-				"Small Cap Stockholm":  {},
-				"Mid Cap Stockholm":    {},
-				"Large Cap Stockholm":  {},
-				"Large Cap Copenhagen": {},
-			},
-		},
-		watcher: &watchController{
-			log:       log,
-			watchRepo: subRepo,
-		},
-		ranker: &rankController{
-			log:            log,
-			cfg:            config,
-			dataRepository: repo,
-			predictor:      pred,
-		},
+		logger:    log.Named("router"),
+		signaller: signaller,
+		watcher:   watcher,
+		ranker:    ranker,
+		cron:      cron,
 	}
 }
 

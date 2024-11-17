@@ -170,6 +170,30 @@ func (db *DB) RemoveSubscription(ctx context.Context, stockName string, userID s
 	return nil
 }
 
+func (db *DB) GetWatchersBySecurities(
+	ctx context.Context,
+	secIDs []int64,
+) (map[int64][]string, error) {
+	watching, err := db.Client.Watch.
+		Query().
+		Where(watch.HasSecurityWith(security.IDIn(secIDs...))).
+		WithSecurity().
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch watching: %w", err)
+	}
+
+	output := map[int64][]string{}
+
+	for _, w := range watching {
+		watchers := output[w.Edges.Security.ID]
+		watchers = append(watchers, w.UserID)
+		output[w.Edges.Security.ID] = watchers
+	}
+
+	return output, nil
+}
+
 func (db *DB) GetSubscribedSecurities(
 	ctx context.Context,
 	userID string,

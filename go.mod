@@ -12,6 +12,7 @@ require (
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/matryer/is v1.4.1
 	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/robfig/cron/v3 v3.0.1
 	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/api v0.103.0
