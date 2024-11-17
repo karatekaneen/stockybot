@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/karatekaneen/stockybot"
 	"go.uber.org/zap"
+
+	"github.com/karatekaneen/stockybot"
 )
 
 type Predictor struct {
@@ -48,6 +51,10 @@ func (p *Predictor) scale(ctx context.Context, req PredictionRequest) ([][]float
 		ToBytesBuffer(rawResp).
 		Fetch(ctx)
 	if err != nil {
+		if requests.HasStatusErr(err, http.StatusTooManyRequests) {
+			time.Sleep(time.Second)
+			return p.scale(ctx, req)
+		}
 		return nil, fmt.Errorf("scale data: %s: %w", rawResp.String(), err)
 	}
 
@@ -73,6 +80,10 @@ func (p *Predictor) predict(
 		ToJSON(&resp).
 		Fetch(ctx)
 	if err != nil {
+		if requests.HasStatusErr(err, http.StatusTooManyRequests) {
+			time.Sleep(time.Second)
+			return p.predict(ctx, req)
+		}
 		return nil, fmt.Errorf("prediction failed: %w", err)
 	}
 
