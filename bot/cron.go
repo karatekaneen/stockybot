@@ -15,11 +15,14 @@ import (
 	"github.com/karatekaneen/stockybot"
 )
 
+var handelsbankenB int64 = 5265
+
 //go:embed templates/dailyreport.tmpl
 var reportTemplate string
 
 type cronController struct {
 	watchRepo subscriptionRepository
+	dataRepo  dataRepository
 	log       *zap.SugaredLogger
 	ranker    *rankController
 	session   *discordgo.Session
@@ -33,6 +36,7 @@ func newCronController(
 	session *discordgo.Session,
 	ranker *rankController,
 	watchRepo subscriptionRepository,
+	dataRepo dataRepository,
 ) *cronController {
 	cc := &cronController{
 		cfg:       cfg,
@@ -40,6 +44,7 @@ func newCronController(
 		session:   session,
 		ranker:    ranker,
 		watchRepo: watchRepo,
+		dataRepo:  dataRepo,
 	}
 
 	go cc.dailyReport()
@@ -114,6 +119,13 @@ func (rc *cronController) generateDailyReport(ctx context.Context) (*dailySummar
 
 	slices.SortFunc(summary.Buys, asDescendingScore)
 
+	dailyCtx, err := rc.dataRepo.StrategyState(ctx, handelsbankenB)
+	if err != nil {
+		return nil, fmt.Errorf("get daily strategy context: %w", err)
+	}
+
+	summary.Regime = dailyCtx.Regime
+
 	return &summary, nil
 }
 
@@ -133,8 +145,19 @@ func newWatchSignal(sig stockybot.Signal, watchers []string, score float64) watc
 }
 
 type dailySummary struct {
-	Sells []watchSignal
-	Buys  []watchSignal
+	Regime string
+	Sells  []watchSignal
+	Buys   []watchSignal
+}
+
+func isInInterestingList(listName string, interestingPrefixes []string) bool {
+	for _, prefix := range interestingPrefixes {
+		if strings.HasPrefix(listName, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func relevantSignals(
@@ -145,6 +168,13 @@ func relevantSignals(
 	out := dailySummary{
 		Sells: []watchSignal{},
 		Buys:  []watchSignal{},
+	}
+
+	// TODO: This should not be hardcoded
+	interestingListPrefixes := []string{
+		"Large Cap",
+		"Mid Cap",
+		"OBX",
 	}
 
 	for _, buy := range pending.buys {
@@ -159,13 +189,15 @@ func relevantSignals(
 			score = preds[predIdx].score
 		}
 
-		if len(watchers) > 0 || score >= 0.3 {
+		if isInInterestingList(buy.Stock.List, interestingListPrefixes) || len(watchers) > 0 ||
+			score >= 0.3 {
 			out.Buys = append(out.Buys, newWatchSignal(buy, watchers, score))
 		}
 	}
 
 	for _, sell := range pending.sells {
-		if watchers := watchMap[sell.Stock.ID]; len(watchers) > 0 {
+		if watchers := watchMap[sell.Stock.ID]; len(watchers) > 0 ||
+			isInInterestingList(sell.Stock.List, interestingListPrefixes) {
 			out.Sells = append(out.Sells, newWatchSignal(sell, watchMap[sell.Stock.ID], 0))
 		}
 	}

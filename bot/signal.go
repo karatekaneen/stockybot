@@ -23,6 +23,7 @@ type dataRepository interface {
 	Signals(ctx context.Context, stockId int64) ([]stockybot.Signal, error)
 	PriceData(ctx context.Context, id int64) (*stockybot.PriceDocument, error)
 	Security(ctx context.Context, id int64) (*stockybot.Security, error)
+	StrategyState(ctx context.Context, id int64) (*stockybot.StrategyState, error)
 }
 
 type signalController struct {

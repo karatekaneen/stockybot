@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/karatekaneen/stockybot/config"
-	"github.com/karatekaneen/stockybot/db"
+	"github.com/karatekaneen/stockybot/firestore"
 )
 
 func createLogger(cfg config.LogConfig) (*zap.Logger, error) {
@@ -33,26 +33,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	zaplog, err := createLogger(cfg.Log)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	logger := zaplog.Sugar()
-
 	ctx := context.Background()
 
-	sqlDB, err := db.New(ctx, cfg.SQLDB, logger)
+	db, err := firestore.New(ctx, cfg.FireDB)
 	if err != nil {
-		logger.Errorf("failed sql db init: %w", err)
-		return
+		panic(err)
 	}
 
-	defer sqlDB.Close()
-
-	x := sqlDB.Client.Watch.Query().AllX(ctx)
-
-	for _, item := range x {
-		fmt.Printf("%+v\n", item)
+	dailyCtx, err := db.StrategyState(ctx, 5265)
+	if err != nil {
+		panic(err)
 	}
+
+	fmt.Printf("%+v\n\n", dailyCtx)
 }

@@ -103,5 +103,5 @@ func Test_printSummary(t *testing.T) {
 
 	is.NoErr(err)
 	fmt.Println(got)
-	is.Equal(len(got), 128)
+	is.Equal(len(got), 261)
 }

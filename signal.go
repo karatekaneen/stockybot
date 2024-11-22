@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+// Describes the current data that the strategy keeps
+// about a particular stock
+type StrategyState struct {
+	LastSignal   *Signal `firestore:"lastSignal,omitempty"`
+	Bias         string  `firestore:"bias,omitempty"`
+	Regime       string  `firestore:"regime,omitempty"`
+	HighPrice    float64 `firestore:"highPrice,omitempty"`
+	LowPrice     float64 `firestore:"lowPrice,omitempty"`
+	TriggerPrice float64 `firestore:"triggerPrice,omitempty"`
+}
+
 type Signal struct {
 	Date        time.Time       `firestore:"date,omitempty"`
 	TriggerDate time.Time       `firestore:"triggerDate,omitempty"`

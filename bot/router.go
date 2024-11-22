@@ -69,7 +69,7 @@ func newRouter(
 		predictor:      pred,
 	}
 
-	cron := newCronController(config, log, session, ranker, subRepo)
+	cron := newCronController(config, log, session, ranker, subRepo, repo)
 
 	return &router{
 		logger:    log.Named("router"),

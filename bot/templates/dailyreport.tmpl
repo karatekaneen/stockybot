@@ -1,3 +1,7 @@
+## Daily Report
+
+We are in a {{ .Regime }} market.
+
 {{- if .Buys -}} ### Buys
 {{ range $buy := .Buys }}
 - {{ printf "%.2f" $buy.Score }}% - {{ $buy.Signal.Stock.Name }}
